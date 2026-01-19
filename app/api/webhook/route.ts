@@ -3,6 +3,8 @@ import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube'
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 
+export const runtime = 'edge';
+
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
   const url = searchParams.get('url');

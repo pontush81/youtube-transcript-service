@@ -3,6 +3,9 @@ import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube'
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 
+// Kör som Edge Function för bättre YouTube-kompatibilitet
+export const runtime = 'edge';
+
 interface TranscriptRequest {
   url: string;
   submitter?: string;
