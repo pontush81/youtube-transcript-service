@@ -1,9 +1,3 @@
-interface TranscriptSegment {
-  text: string;
-  start: number;
-  duration: number;
-}
-
 export function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/watch\?v=)([^&\n?#]+)/,
