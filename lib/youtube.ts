@@ -20,6 +20,23 @@ export function extractVideoId(url: string): string | null {
 }
 
 export async function fetchTranscript(videoId: string): Promise<string> {
+  // Prova olika språk - svenska först, sen engelska, sen utan språk
+  const languages = ['sv', 'en', undefined];
+
+  for (const lang of languages) {
+    try {
+      const config = lang ? { lang } : undefined;
+      const segments = await YoutubeTranscript.fetchTranscript(videoId, config);
+      if (segments && segments.length > 0) {
+        return segments.map(s => s.text).join(' ');
+      }
+    } catch {
+      // Prova nästa språk
+      continue;
+    }
+  }
+
+  // Sista försök utan config
   const segments = await YoutubeTranscript.fetchTranscript(videoId);
   return segments.map(s => s.text).join(' ');
 }
