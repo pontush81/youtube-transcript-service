@@ -1,3 +1,13 @@
+interface SupadataResponse {
+  lang: string;
+  availableLangs: string[];
+  content: Array<{
+    text: string;
+    offset: number;
+    duration: number;
+  }>;
+}
+
 export function extractVideoId(url: string): string | null {
   const patterns = [
     /(?:youtube\.com\/watch\?v=)([^&\n?#]+)/,
@@ -17,150 +27,80 @@ export function extractVideoId(url: string): string | null {
   return null;
 }
 
-// Metod 1: youtube-transcript paketet
-async function fetchWithYoutubeTranscript(videoId: string): Promise<string | null> {
-  try {
-    const { YoutubeTranscript } = await import('youtube-transcript');
-    const segments = await YoutubeTranscript.fetchTranscript(videoId);
-    if (segments && segments.length > 0) {
-      return segments.map(s => s.text).join(' ');
-    }
-  } catch (error) {
-    console.log('youtube-transcript failed:', error);
-  }
-  return null;
-}
+export async function fetchTranscript(videoId: string, preferredLang?: string): Promise<string> {
+  const apiKey = process.env.SUPADATA_API_KEY;
 
-// Metod 2: Direkt från YouTube HTML (som backup)
-async function fetchFromYouTubeHtml(videoId: string): Promise<string | null> {
-  try {
-    const watchUrl = `https://www.youtube.com/watch?v=${videoId}`;
-    const response = await fetch(watchUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Accept-Language': 'en-US,en;q=0.9,sv;q=0.8',
-        'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      },
-    });
-
-    const html = await response.text();
-
-    // Hitta caption tracks via regex
-    const trackRegex = /"baseUrl":"(https:\/\/www\.youtube\.com\/api\/timedtext[^"]+)"/g;
-    const matches = [...html.matchAll(trackRegex)];
-    
-    if (matches.length === 0) {
-      return null;
-    }
-
-    // Prova första URL:en
-    const captionUrl = matches[0][1]
-      .replace(/\\u0026/g, '&')
-      .replace(/\\\//g, '/');
-    
-    const captionResponse = await fetch(captionUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-      },
-    });
-    
-    const xml = await captionResponse.text();
-    
-    if (!xml || xml.length === 0) {
-      return null;
-    }
-
-    // Parse XML
-    const segments: string[] = [];
-    const regex = /<text[^>]*>([^<]*)<\/text>/g;
-    let match;
-
-    while ((match = regex.exec(xml)) !== null) {
-      const text = match[1]
-        .replace(/&amp;/g, '&')
-        .replace(/&lt;/g, '<')
-        .replace(/&gt;/g, '>')
-        .replace(/&quot;/g, '"')
-        .replace(/&#39;/g, "'")
-        .replace(/\n/g, ' ')
-        .trim();
-
-      if (text) {
-        segments.push(text);
-      }
-    }
-
-    if (segments.length > 0) {
-      return segments.join(' ');
-    }
-  } catch (error) {
-    console.log('YouTube HTML fetch failed:', error);
-  }
-  return null;
-}
-
-// Metod 3: RapidAPI fallback (kräver API-nyckel)
-async function fetchFromRapidApi(videoId: string): Promise<string | null> {
-  const apiKey = process.env.RAPIDAPI_KEY;
   if (!apiKey) {
-    return null;
+    throw new Error('SUPADATA_API_KEY är inte konfigurerad');
   }
 
-  try {
-    const response = await fetch(
-      `https://youtube-transcriptor.p.rapidapi.com/transcript?video_id=${videoId}&lang=en`,
-      {
-        headers: {
-          'X-RapidAPI-Key': apiKey,
-          'X-RapidAPI-Host': 'youtube-transcriptor.p.rapidapi.com',
-        },
-      }
-    );
+  // Bygg URL med språkpreferens
+  let url = `https://api.supadata.ai/v1/youtube/transcript?videoId=${videoId}`;
 
-    const data = await response.json();
-    
-    if (data && Array.isArray(data) && data.length > 0) {
-      // RapidAPI returnerar array av segment
-      const transcript = data
-        .map((segment: { text?: string }) => segment.text || '')
-        .filter(Boolean)
-        .join(' ');
-      
-      if (transcript.length > 0) {
-        return transcript;
-      }
+  // Prioritera: användarens val -> svenska -> engelska
+  const langPriority = preferredLang ? [preferredLang, 'sv', 'en'] : ['sv', 'en'];
+
+  // Första anrop för att se tillgängliga språk
+  const response = await fetch(url, {
+    headers: {
+      'x-api-key': apiKey,
+    },
+  });
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Videon hittades inte eller saknar transkript');
     }
-  } catch (error) {
-    console.log('RapidAPI fetch failed:', error);
-  }
-  return null;
-}
-
-export async function fetchTranscript(videoId: string): Promise<string> {
-  // Prova alla metoder i ordning
-  
-  // 1. youtube-transcript paketet
-  let transcript = await fetchWithYoutubeTranscript(videoId);
-  if (transcript && transcript.length > 50) {
-    console.log('Success with youtube-transcript package');
-    return transcript;
+    if (response.status === 429) {
+      throw new Error('API-kvoten är slut för denna månad');
+    }
+    throw new Error(`API-fel: ${response.status}`);
   }
 
-  // 2. Direkt från YouTube HTML
-  transcript = await fetchFromYouTubeHtml(videoId);
-  if (transcript && transcript.length > 50) {
-    console.log('Success with YouTube HTML fetch');
-    return transcript;
+  const data: SupadataResponse = await response.json();
+
+  if (!data.content || data.content.length === 0) {
+    throw new Error('Inget transkript tillgängligt för denna video');
   }
 
-  // 3. RapidAPI fallback
-  transcript = await fetchFromRapidApi(videoId);
-  if (transcript && transcript.length > 50) {
-    console.log('Success with RapidAPI');
-    return transcript;
+  // Om vi fick ett icke-prefererat språk, försök hämta ett bättre
+  const availableLangs = data.availableLangs || [];
+  let bestLang = data.lang;
+
+  for (const lang of langPriority) {
+    if (availableLangs.includes(lang) && lang !== data.lang) {
+      // Hämta med prefererat språk
+      const langResponse = await fetch(`${url}&lang=${lang}`, {
+        headers: {
+          'x-api-key': apiKey,
+        },
+      });
+
+      if (langResponse.ok) {
+        const langData: SupadataResponse = await langResponse.json();
+        if (langData.content && langData.content.length > 0) {
+          bestLang = lang;
+          data.content = langData.content;
+          break;
+        }
+      }
+    } else if (lang === data.lang) {
+      break; // Vi har redan bästa språket
+    }
   }
 
-  throw new Error('Could not fetch transcript with any method');
+  // Kombinera alla textsegment
+  const transcript = data.content
+    .map(segment => segment.text.replace(/\n/g, ' ').trim())
+    .filter(Boolean)
+    .join(' ');
+
+  if (transcript.length === 0) {
+    throw new Error('Transkriptet var tomt');
+  }
+
+  console.log(`Transcript fetched in ${bestLang}, ${transcript.length} chars`);
+  return transcript;
 }
 
 export async function fetchVideoTitle(videoId: string): Promise<string> {
