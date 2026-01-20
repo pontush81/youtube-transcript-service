@@ -4,89 +4,38 @@ import { put, del } from '@vercel/blob';
 // Vercel free tier har 10s timeout
 export const maxDuration = 10;
 
-const CHUNK_SIZE = 1500; // Mindre chunks för snabbare OpenAI-svar
-
-async function formatChunk(
-  apiKey: string,
-  chunk: string,
-  chunkIndex: number,
-  isFirst: boolean
-): Promise<string> {
-  const systemPrompt = `You are a text formatter. Your ONLY task is to add paragraph breaks to make transcript text more readable.
-
-CRITICAL RULES:
-- DO NOT TRANSLATE. Keep the EXACT original language. If input is English, output must be English. If input is Swedish, output must be Swedish.
-- Add paragraph breaks at natural pauses (topic changes, new thoughts, rhetorical pauses)
-- A paragraph = typically 2-5 sentences
-- At clear speaker changes (e.g. >> or when someone responds): add a blank line
-- KEEP all original text exactly - do not change any words
-- Return ONLY the formatted text, no comments
-${isFirst ? '- You MAY add ONE heading (##) at the start that summarizes the topic' : '- Do NOT add any heading - this is a continuation'}
-
-IMPORTANT: Never translate. Output language must match input language exactly.`;
-
-  const response = await fetch('https://api.openai.com/v1/chat/completions', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'Authorization': `Bearer ${apiKey}`,
-    },
-    body: JSON.stringify({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: systemPrompt,
-        },
-        {
-          role: 'user',
-          content: chunk,
-        },
-      ],
-      temperature: 0.1,
-      max_tokens: 2000,
-    }),
-  });
-
-  if (!response.ok) {
-    throw new Error(`OpenAI error for chunk ${chunkIndex}`);
-  }
-
-  const data = await response.json();
-  return data.choices?.[0]?.message?.content || chunk;
-}
-
-function splitIntoChunks(text: string, chunkSize: number): string[] {
-  const chunks: string[] = [];
+// Enkel formatering utan AI - lägger till styckebrytningar
+function simpleFormat(text: string): string {
+  // Dela upp i meningar
   const sentences = text.split(/(?<=[.!?])\s+/);
-  let currentChunk = '';
+
+  const paragraphs: string[] = [];
+  let currentParagraph: string[] = [];
 
   for (const sentence of sentences) {
-    if (currentChunk.length + sentence.length > chunkSize && currentChunk.length > 0) {
-      chunks.push(currentChunk.trim());
-      currentChunk = sentence;
-    } else {
-      currentChunk += (currentChunk ? ' ' : '') + sentence;
+    currentParagraph.push(sentence);
+
+    // Skapa nytt stycke var 3-5:e mening eller vid tydliga pauser
+    if (
+      currentParagraph.length >= 4 ||
+      sentence.endsWith('?') ||
+      sentence.includes('>>') ||
+      /^(So|Now|But|However|Then|Next|First|Finally|Also|And then)/i.test(sentence)
+    ) {
+      paragraphs.push(currentParagraph.join(' '));
+      currentParagraph = [];
     }
   }
 
-  if (currentChunk.trim()) {
-    chunks.push(currentChunk.trim());
+  // Lägg till resterande meningar
+  if (currentParagraph.length > 0) {
+    paragraphs.push(currentParagraph.join(' '));
   }
 
-  return chunks;
+  return paragraphs.join('\n\n');
 }
 
 export async function POST(request: NextRequest) {
-  const apiKey = process.env.OPENAI_API_KEY;
-
-  if (!apiKey) {
-    return NextResponse.json(
-      { success: false, error: 'OpenAI API-nyckel saknas' },
-      { status: 500 }
-    );
-  }
-
   try {
     const { blobUrl, title } = await request.json();
 
@@ -125,41 +74,24 @@ export async function POST(request: NextRequest) {
     let transcript = restContent;
 
     if (restContent.includes('## Sammanfattning') || restContent.includes('## Summary')) {
-      // Summary ends with --- separator, look for that instead of ## Transkript heading
       const summaryMatch = restContent.match(/(## (?:Sammanfattning|Summary)[\s\S]*?)(?=\n---\n|## Transkript|## Transcript|$)/i);
       if (summaryMatch) {
-        summarySection = summaryMatch[1].trim() + '\n\n';
-        // Remove summary and the --- separator
+        summarySection = summaryMatch[1].trim() + '\n\n---\n\n';
         transcript = restContent.replace(summaryMatch[1], '').replace(/^[\s]*---[\s]*/, '').trim();
-        console.log(`Extracted summary (${summarySection.length} chars), transcript remaining: ${transcript.length} chars`);
       }
     }
 
-    // Dela upp i chunks och formatera parallellt
-    const chunks = splitIntoChunks(transcript, CHUNK_SIZE);
-    console.log(`Formatting ${chunks.length} chunks for "${title}", transcript length: ${transcript.length}`);
-
-    if (chunks.length === 0) {
+    if (!transcript || transcript.length < 10) {
       return NextResponse.json(
         { success: false, error: 'Kunde inte hitta transkripttext att formatera' },
         { status: 400 }
       );
     }
 
-    // Formatera chunks sekventiellt (säkrare för 10s timeout)
-    // Begränsa till max 3 chunks per request
-    const maxChunks = Math.min(chunks.length, 3);
-    const formattedChunks: string[] = [];
-    for (let i = 0; i < maxChunks; i++) {
-      const formatted = await formatChunk(apiKey, chunks[i], i, i === 0);
-      formattedChunks.push(formatted);
-    }
-    // Lägg till oformaterade chunks om det finns fler
-    for (let i = maxChunks; i < chunks.length; i++) {
-      formattedChunks.push(chunks[i]);
-    }
+    console.log(`Simple formatting for "${title}", transcript length: ${transcript.length}`);
 
-    const formatted = formattedChunks.join('\n\n');
+    // Enkel formatering utan AI
+    const formatted = simpleFormat(transcript);
 
     // Extrahera filnamn från URL
     const urlParts = new URL(blobUrl);
@@ -169,8 +101,8 @@ export async function POST(request: NextRequest) {
     // Radera gamla bloben först
     await del(blobUrl);
 
-    // Spara formaterad version (behåll sammanfattning oförändrad)
-    const newContent = header + summarySection + (summarySection ? '\n\n' : '') + formatted + '\n';
+    // Spara formaterad version
+    const newContent = header + summarySection + formatted + '\n';
     const blob = await put(`transcripts/${filename}`, newContent, {
       access: 'public',
       contentType: 'text/markdown',
@@ -179,7 +111,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       newUrl: blob.url,
-      message: `Transkriptet har formaterats (${chunks.length} delar)`,
+      message: 'Transkriptet har formaterats',
     });
   } catch (error) {
     console.error('Format error:', error);
