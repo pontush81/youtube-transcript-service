@@ -125,10 +125,12 @@ export async function POST(request: NextRequest) {
     let transcript = restContent;
 
     if (restContent.includes('## Sammanfattning') || restContent.includes('## Summary')) {
-      const summaryMatch = restContent.match(/(## (?:Sammanfattning|Summary)[\s\S]*?)(?=## Transkript|## Transcript|$)/i);
+      // Summary ends with --- separator, look for that instead of ## Transkript heading
+      const summaryMatch = restContent.match(/(## (?:Sammanfattning|Summary)[\s\S]*?)(?=\n---\n|## Transkript|## Transcript|$)/i);
       if (summaryMatch) {
-        summarySection = summaryMatch[1];
-        transcript = restContent.replace(summaryMatch[1], '').trim();
+        summarySection = summaryMatch[1].trim() + '\n\n';
+        // Remove summary and the --- separator
+        transcript = restContent.replace(summaryMatch[1], '').replace(/^[\s]*---[\s]*/, '').trim();
       }
     }
 
