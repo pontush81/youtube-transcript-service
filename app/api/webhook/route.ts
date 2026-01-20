@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube';
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
+import { formatTranscriptWithAI } from '@/lib/format-ai';
 
 export const runtime = 'edge';
 
@@ -48,7 +49,10 @@ export async function GET(request: NextRequest) {
     );
   }
 
-  const markdown = generateMarkdown(transcript, {
+  // Formatera transkriptet med AI för bättre läsbarhet
+  const formattedTranscript = await formatTranscriptWithAI(transcript, title);
+
+  const markdown = generateMarkdown(formattedTranscript, {
     title,
     videoId,
     url,

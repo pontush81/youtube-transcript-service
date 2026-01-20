@@ -21,6 +21,7 @@ https://github.com/pontush81/youtube-transcript-service
 - Tailwind CSS v4
 - Supadata API (transkript)
 - Vercel Blob Storage (fillagring)
+- OpenAI GPT-4o-mini (AI-formatering av transkript)
 
 ## API Endpoints
 - `POST /api/transcript` - Hämta transkript via formulär
@@ -29,19 +30,24 @@ https://github.com/pontush81/youtube-transcript-service
 ## Miljövariabler (Vercel)
 - `SUPADATA_API_KEY` - API-nyckel från supadata.ai
 - `BLOB_READ_WRITE_TOKEN` - Skapas automatiskt av Vercel Blob
+- `OPENAI_API_KEY` - API-nyckel från platform.openai.com (valfri, för AI-formatering)
 
 ## Filstruktur
 ```
 app/
 ├── page.tsx              # Formulär
 ├── success/page.tsx      # Resultat med nedladdning
+├── transcripts/page.tsx  # Lista sparade transkript
+├── transcripts/[id]/page.tsx  # Läs transkript
 └── api/
     ├── transcript/route.ts
+    ├── transcripts/route.ts  # Lista alla transkript
     └── webhook/route.ts
 lib/
 ├── youtube.ts            # Supadata integration
 ├── markdown.ts           # Genererar MD
-└── storage.ts            # Vercel Blob
+├── storage.ts            # Vercel Blob
+└── format-ai.ts          # OpenAI formatering
 components/
 ├── TranscriptForm.tsx
 └── DownloadButton.tsx
