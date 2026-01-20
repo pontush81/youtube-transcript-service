@@ -13,6 +13,10 @@ export default function TranscriptViewPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [blobUrl, setBlobUrl] = useState<string | null>(null);
+  const [title, setTitle] = useState<string>('');
+  const [formatting, setFormatting] = useState(false);
+  const [formatError, setFormatError] = useState<string | null>(null);
+  const [isFormatted, setIsFormatted] = useState(false);
 
   useEffect(() => {
     async function fetchTranscript() {
@@ -31,6 +35,7 @@ export default function TranscriptViewPage() {
         }
 
         setBlobUrl(transcript.url);
+        setTitle(transcript.title || '');
 
         // Hämta innehållet
         const contentResponse = await fetch(transcript.url);
@@ -38,6 +43,9 @@ export default function TranscriptViewPage() {
 
         const text = await contentResponse.text();
         setContent(text);
+
+        // Kolla om redan formaterad (har ## rubriker eller **Talare**)
+        setIsFormatted(text.includes('\n## ') || text.includes('**Talare'));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ett fel uppstod');
       } finally {
@@ -49,6 +57,42 @@ export default function TranscriptViewPage() {
       fetchTranscript();
     }
   }, [id]);
+
+  const handleFormat = async () => {
+    if (!blobUrl || formatting) return;
+
+    setFormatting(true);
+    setFormatError(null);
+
+    try {
+      const response = await fetch('/api/format', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blobUrl, title }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Formatering misslyckades');
+      }
+
+      // Hämta det nya innehållet
+      if (data.newUrl) {
+        const newContentResponse = await fetch(data.newUrl);
+        if (newContentResponse.ok) {
+          const newText = await newContentResponse.text();
+          setContent(newText);
+          setBlobUrl(data.newUrl);
+          setIsFormatted(true);
+        }
+      }
+    } catch (err) {
+      setFormatError(err instanceof Error ? err.message : 'Ett fel uppstod');
+    } finally {
+      setFormatting(false);
+    }
+  };
 
   return (
     <main className="min-h-screen py-12 px-4">
@@ -89,28 +133,62 @@ export default function TranscriptViewPage() {
                 </svg>
                 Tillbaka
               </Link>
-              {blobUrl && (
-                <a
-                  href={blobUrl}
-                  download
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                >
-                  <svg
-                    xmlns="http://www.w3.org/2000/svg"
-                    className="h-4 w-4"
-                    viewBox="0 0 20 20"
-                    fill="currentColor"
+              <div className="flex items-center gap-2">
+                {!isFormatted && (
+                  <button
+                    onClick={handleFormat}
+                    disabled={formatting}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                   >
-                    <path
-                      fillRule="evenodd"
-                      d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
-                      clipRule="evenodd"
-                    />
-                  </svg>
-                  Ladda ner
-                </a>
-              )}
+                    {formatting ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        Formaterar...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                        </svg>
+                        Formatera med AI
+                      </>
+                    )}
+                  </button>
+                )}
+                {blobUrl && (
+                  <a
+                    href={blobUrl}
+                    download
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="h-4 w-4"
+                      viewBox="0 0 20 20"
+                      fill="currentColor"
+                    >
+                      <path
+                        fillRule="evenodd"
+                        d="M3 17a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm3.293-7.707a1 1 0 011.414 0L9 10.586V3a1 1 0 112 0v7.586l1.293-1.293a1 1 0 111.414 1.414l-3 3a1 1 0 01-1.414 0l-3-3a1 1 0 010-1.414z"
+                        clipRule="evenodd"
+                      />
+                    </svg>
+                    Ladda ner
+                  </a>
+                )}
+              </div>
             </div>
+
+            {formatError && (
+              <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {formatError}
+              </div>
+            )}
 
             <article className="bg-white p-8 md:p-12 rounded-xl shadow-sm border border-gray-200">
               <div className="transcript-content">
