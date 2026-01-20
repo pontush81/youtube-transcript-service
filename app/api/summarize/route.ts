@@ -70,12 +70,15 @@ export async function POST(request: NextRequest) {
 
 RULES:
 - Write in the SAME LANGUAGE as the transcript (if English, write in English; if Swedish, write in Swedish)
-- Create 5-10 bullet points with the most important insights/takeaways
-- Each point should be 1-2 sentences max
-- Focus on actionable insights, key concepts, and main arguments
+- Create 5–10 bullet points with the most important insights or takeaways
+- Each bullet point should be 1–2 sentences maximum
+- Focus on actionable insights, key concepts, decisions, explanations, and main arguments
+- Prioritize factual information and reasoning over anecdotes or filler
+- Ignore ads, sponsor messages, greetings, housekeeping, and repetitive content
+- Avoid vague statements; each bullet should convey a concrete idea
 - Use bullet points (-)
-- Do NOT include any introduction or conclusion text, just the bullet points
-- Do NOT translate - use the same language as the input`,
+- Do NOT include any introduction or conclusion text
+- Do NOT translate — always use the same language as the input`,
           },
           {
             role: 'user',
