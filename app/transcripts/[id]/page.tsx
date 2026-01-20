@@ -1,12 +1,13 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { useParams } from 'next/navigation';
+import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
 
 export default function TranscriptViewPage() {
   const params = useParams();
+  const router = useRouter();
   const id = params.id as string;
 
   const [content, setContent] = useState<string | null>(null);
@@ -17,6 +18,10 @@ export default function TranscriptViewPage() {
   const [formatting, setFormatting] = useState(false);
   const [formatError, setFormatError] = useState<string | null>(null);
   const [isFormatted, setIsFormatted] = useState(false);
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [adminKey, setAdminKey] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
 
   useEffect(() => {
     async function fetchTranscript() {
@@ -93,6 +98,33 @@ export default function TranscriptViewPage() {
       setFormatError(err instanceof Error ? err.message : 'Ett fel uppstod');
     } finally {
       setFormatting(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    if (!blobUrl || deleting || !adminKey) return;
+
+    setDeleting(true);
+    setDeleteError(null);
+
+    try {
+      const response = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blobUrl, adminKey }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Radering misslyckades');
+      }
+
+      // Redirect till listan
+      router.push('/transcripts');
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Ett fel uppstod');
+      setDeleting(false);
     }
   };
 
@@ -183,6 +215,24 @@ export default function TranscriptViewPage() {
                     Ladda ner
                   </a>
                 )}
+                <button
+                  onClick={() => setShowDeleteModal(true)}
+                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    className="h-4 w-4"
+                    viewBox="0 0 20 20"
+                    fill="currentColor"
+                  >
+                    <path
+                      fillRule="evenodd"
+                      d="M9 2a1 1 0 00-.894.553L7.382 4H4a1 1 0 000 2v10a2 2 0 002 2h8a2 2 0 002-2V6a1 1 0 100-2h-3.382l-.724-1.447A1 1 0 0011 2H9zM7 8a1 1 0 012 0v6a1 1 0 11-2 0V8zm5-1a1 1 0 00-1 1v6a1 1 0 102 0V8a1 1 0 00-1-1z"
+                      clipRule="evenodd"
+                    />
+                  </svg>
+                  Radera
+                </button>
               </div>
             </div>
 
@@ -249,6 +299,59 @@ export default function TranscriptViewPage() {
           </>
         )}
       </div>
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Radera transkript
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Är du säker på att du vill radera detta transkript? Detta kan inte ångras.
+            </p>
+
+            <div className="mb-4">
+              <label className="block text-sm font-medium text-gray-700 mb-1">
+                Admin-nyckel
+              </label>
+              <input
+                type="password"
+                value={adminKey}
+                onChange={(e) => setAdminKey(e.target.value)}
+                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                placeholder="Ange admin-nyckel"
+              />
+            </div>
+
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setAdminKey('');
+                  setDeleteError(null);
+                }}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={deleting || !adminKey}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {deleting ? 'Raderar...' : 'Radera'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }

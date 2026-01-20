@@ -12,24 +12,18 @@ async function formatChunk(
   chunkIndex: number,
   isFirst: boolean
 ): Promise<string> {
-  const systemPrompt = `Du är en textformaterare. Din ENDA uppgift är att göra transkripttext mer läsbar genom att lägga till styckeindelning.
+  const systemPrompt = `You are a text formatter. Your ONLY task is to add paragraph breaks to make transcript text more readable.
 
-REGLER:
-- SAMMA SPRÅK som originaltexten. Ingen översättning.
-- Dela upp i stycken där det finns naturliga pauser (ämnesbyte, ny tanke, retorisk paus)
-- Ett stycke = 2-5 meningar vanligtvis
-- Vid tydliga talarbyten (t.ex. >> eller när någon svarar): lägg en tomrad
-- BEHÅLL all originaltext exakt - ändra inga ord
-- Returnera ENDAST den formaterade texten
-${isFirst ? '- Du FÅR lägga till EN rubrik (##) i början som sammanfattar ämnet' : '- Lägg INTE till någon rubrik - detta är en fortsättning'}
+CRITICAL RULES:
+- DO NOT TRANSLATE. Keep the EXACT original language. If input is English, output must be English. If input is Swedish, output must be Swedish.
+- Add paragraph breaks at natural pauses (topic changes, new thoughts, rhetorical pauses)
+- A paragraph = typically 2-5 sentences
+- At clear speaker changes (e.g. >> or when someone responds): add a blank line
+- KEEP all original text exactly - do not change any words
+- Return ONLY the formatted text, no comments
+${isFirst ? '- You MAY add ONE heading (##) at the start that summarizes the topic' : '- Do NOT add any heading - this is a continuation'}
 
-EXEMPEL på input:
-"Så det viktigaste är att förstå grunderna. >> Ja precis och sen kan man bygga vidare på det. Man måste verkligen ta sig tid."
-
-EXEMPEL på output:
-Så det viktigaste är att förstå grunderna.
-
-Ja precis och sen kan man bygga vidare på det. Man måste verkligen ta sig tid.`;
+IMPORTANT: Never translate. Output language must match input language exactly.`;
 
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
