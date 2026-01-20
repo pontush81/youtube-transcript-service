@@ -12,6 +12,25 @@ async function formatChunk(
   chunkIndex: number,
   isFirst: boolean
 ): Promise<string> {
+  const systemPrompt = `Du är en textformaterare. Din ENDA uppgift är att göra transkripttext mer läsbar genom att lägga till styckeindelning.
+
+REGLER:
+- SAMMA SPRÅK som originaltexten. Ingen översättning.
+- Dela upp i stycken där det finns naturliga pauser (ämnesbyte, ny tanke, retorisk paus)
+- Ett stycke = 2-5 meningar vanligtvis
+- Vid tydliga talarbyten (t.ex. >> eller när någon svarar): lägg en tomrad
+- BEHÅLL all originaltext exakt - ändra inga ord
+- Returnera ENDAST den formaterade texten
+${isFirst ? '- Du FÅR lägga till EN rubrik (##) i början som sammanfattar ämnet' : '- Lägg INTE till någon rubrik - detta är en fortsättning'}
+
+EXEMPEL på input:
+"Så det viktigaste är att förstå grunderna. >> Ja precis och sen kan man bygga vidare på det. Man måste verkligen ta sig tid."
+
+EXEMPEL på output:
+Så det viktigaste är att förstå grunderna.
+
+Ja precis och sen kan man bygga vidare på det. Man måste verkligen ta sig tid.`;
+
   const response = await fetch('https://api.openai.com/v1/chat/completions', {
     method: 'POST',
     headers: {
@@ -23,23 +42,14 @@ async function formatChunk(
       messages: [
         {
           role: 'system',
-          content: `Du formaterar en DEL av ett YouTube-transkript för bättre läsbarhet.
-
-Uppgifter:
-1. Dela upp i logiska stycken
-2. Markera talarbyten med "**Talare:**" om du ser dem (t.ex. >> eller namnbyten)
-${isFirst ? '3. Lägg till en kort sammanfattande rubrik (## Rubrik) i början om lämpligt' : '3. Lägg INTE till rubrik i början - detta är en fortsättning'}
-4. Behåll ALL text - ta inte bort något
-5. Returnera ENDAST formaterad text, ingen kommentar
-
-Svara på samma språk som texten.`,
+          content: systemPrompt,
         },
         {
           role: 'user',
           content: chunk,
         },
       ],
-      temperature: 0.2,
+      temperature: 0.1,
       max_tokens: 6000,
     }),
   });
