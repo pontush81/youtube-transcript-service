@@ -118,7 +118,19 @@ export async function POST(request: NextRequest) {
     }
 
     const header = parts[0] + '---\n\n';
-    const transcript = parts.slice(1).join('---').trim();
+    let restContent = parts.slice(1).join('---').trim();
+
+    // Separera sammanfattning från transkript om den finns
+    let summarySection = '';
+    let transcript = restContent;
+
+    if (restContent.includes('## Sammanfattning') || restContent.includes('## Summary')) {
+      const summaryMatch = restContent.match(/(## (?:Sammanfattning|Summary)[\s\S]*?)(?=## Transkript|## Transcript|$)/i);
+      if (summaryMatch) {
+        summarySection = summaryMatch[1];
+        transcript = restContent.replace(summaryMatch[1], '').trim();
+      }
+    }
 
     // Dela upp i chunks och formatera parallellt
     const chunks = splitIntoChunks(transcript, CHUNK_SIZE);
@@ -136,8 +148,8 @@ export async function POST(request: NextRequest) {
     const pathname = urlParts.pathname;
     const filename = pathname.split('/').pop() || 'transcript.md';
 
-    // Spara formaterad version
-    const newContent = header + formatted + '\n';
+    // Spara formaterad version (behåll sammanfattning oförändrad)
+    const newContent = header + summarySection + (summarySection ? '\n\n' : '') + formatted + '\n';
     const blob = await put(`transcripts/${filename}`, newContent, {
       access: 'public',
       contentType: 'text/markdown',
