@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 
 export const maxDuration = 60;
 
@@ -116,6 +116,9 @@ RULES:
     const urlParts = new URL(blobUrl);
     const pathname = urlParts.pathname;
     const filename = pathname.split('/').pop() || 'transcript.md';
+
+    // Radera gamla bloben först
+    await del(blobUrl);
 
     // Spara uppdaterad version
     const blob = await put(`transcripts/${filename}`, newContent, {

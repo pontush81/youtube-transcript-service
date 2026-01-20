@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { put } from '@vercel/blob';
+import { put, del } from '@vercel/blob';
 
 // Använd Node.js runtime för längre timeout
 export const maxDuration = 60;
@@ -147,6 +147,9 @@ export async function POST(request: NextRequest) {
     const urlParts = new URL(blobUrl);
     const pathname = urlParts.pathname;
     const filename = pathname.split('/').pop() || 'transcript.md';
+
+    // Radera gamla bloben först
+    await del(blobUrl);
 
     // Spara formaterad version (behåll sammanfattning oförändrad)
     const newContent = header + summarySection + (summarySection ? '\n\n' : '') + formatted + '\n';
