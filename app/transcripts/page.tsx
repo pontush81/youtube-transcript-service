@@ -93,10 +93,8 @@ export default function TranscriptsPage() {
             <ul className="divide-y divide-gray-200">
               {transcripts.map((transcript, index) => (
                 <li key={index}>
-                  <a
-                    href={transcript.url}
-                    target="_blank"
-                    rel="noopener noreferrer"
+                  <Link
+                    href={`/transcripts/${transcript.videoId}`}
                     className="block p-4 hover:bg-gray-50 transition-colors"
                   >
                     <div className="flex items-center justify-between">
@@ -138,7 +136,7 @@ export default function TranscriptsPage() {
                         </svg>
                       </div>
                     </div>
-                  </a>
+                  </Link>
                 </li>
               ))}
             </ul>
