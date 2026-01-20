@@ -13,7 +13,7 @@ Next.js 16 app som hämtar YouTube-transkript via Supadata API och sparar som Ma
 https://youtube-transcript-service-two.vercel.app
 
 ## GitHub
-https://github.com/pontush81/youtube-transcript-service
+https://github.com/pontush81/youtube-transcript-servicemin 
 
 ## Tech Stack
 - Next.js 16 (App Router, Edge Runtime)

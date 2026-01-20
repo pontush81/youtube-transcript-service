@@ -131,12 +131,20 @@ export async function POST(request: NextRequest) {
         summarySection = summaryMatch[1].trim() + '\n\n';
         // Remove summary and the --- separator
         transcript = restContent.replace(summaryMatch[1], '').replace(/^[\s]*---[\s]*/, '').trim();
+        console.log(`Extracted summary (${summarySection.length} chars), transcript remaining: ${transcript.length} chars`);
       }
     }
 
     // Dela upp i chunks och formatera parallellt
     const chunks = splitIntoChunks(transcript, CHUNK_SIZE);
-    console.log(`Formatting ${chunks.length} chunks for "${title}"`);
+    console.log(`Formatting ${chunks.length} chunks for "${title}", transcript length: ${transcript.length}`);
+
+    if (chunks.length === 0) {
+      return NextResponse.json(
+        { success: false, error: 'Kunde inte hitta transkripttext att formatera' },
+        { status: 400 }
+      );
+    }
 
     // Formatera alla chunks parallellt för snabbhet
     const formattedChunks = await Promise.all(

@@ -84,6 +84,13 @@ export default function TranscriptViewPage() {
         body: JSON.stringify({ blobUrl, title }),
       });
 
+      // Handle non-JSON error responses (e.g., Vercel platform errors)
+      const contentType = response.headers.get('content-type');
+      if (!contentType?.includes('application/json')) {
+        const text = await response.text();
+        throw new Error(text || 'Serverfel vid formatering');
+      }
+
       const data = await response.json();
 
       if (!response.ok) {
