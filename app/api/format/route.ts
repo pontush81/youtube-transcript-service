@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put } from '@vercel/blob';
 
-export const runtime = 'edge';
-export const maxDuration = 60; // Vercel Pro: 60 sek, Free: 25 sek
+// Använd Node.js runtime för längre timeout (60 sek på Hobby, 300 sek på Pro)
+export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
   const apiKey = process.env.OPENAI_API_KEY;
