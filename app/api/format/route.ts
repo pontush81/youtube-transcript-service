@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
 
-// Använd Node.js runtime för längre timeout
-export const maxDuration = 60;
+// Vercel free tier har 10s timeout
+export const maxDuration = 10;
 
-const CHUNK_SIZE = 4000; // ~4000 tecken per chunk för snabbare svar
+const CHUNK_SIZE = 1500; // Mindre chunks för snabbare OpenAI-svar
 
 async function formatChunk(
   apiKey: string,
@@ -44,7 +44,7 @@ IMPORTANT: Never translate. Output language must match input language exactly.`;
         },
       ],
       temperature: 0.1,
-      max_tokens: 6000,
+      max_tokens: 2000,
     }),
   });
 
@@ -146,10 +146,18 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Formatera alla chunks parallellt för snabbhet
-    const formattedChunks = await Promise.all(
-      chunks.map((chunk, i) => formatChunk(apiKey, chunk, i, i === 0))
-    );
+    // Formatera chunks sekventiellt (säkrare för 10s timeout)
+    // Begränsa till max 3 chunks per request
+    const maxChunks = Math.min(chunks.length, 3);
+    const formattedChunks: string[] = [];
+    for (let i = 0; i < maxChunks; i++) {
+      const formatted = await formatChunk(apiKey, chunks[i], i, i === 0);
+      formattedChunks.push(formatted);
+    }
+    // Lägg till oformaterade chunks om det finns fler
+    for (let i = maxChunks; i < chunks.length; i++) {
+      formattedChunks.push(chunks[i]);
+    }
 
     const formatted = formattedChunks.join('\n\n');
 
