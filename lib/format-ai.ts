@@ -1,26 +1,28 @@
-import OpenAI from 'openai';
-
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
-
 export async function formatTranscriptWithAI(
   transcript: string,
   title: string
 ): Promise<string> {
+  const apiKey = process.env.OPENAI_API_KEY;
+
   // Om inget API-nyckel, returnera oformaterad text
-  if (!process.env.OPENAI_API_KEY) {
+  if (!apiKey) {
     console.log('No OPENAI_API_KEY, skipping AI formatting');
     return transcript;
   }
 
   try {
-    const response = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      messages: [
-        {
-          role: 'system',
-          content: `Du är en expert på att formatera transkript från YouTube-videor för bättre läsbarhet.
+    const response = await fetch('https://api.openai.com/v1/chat/completions', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${apiKey}`,
+      },
+      body: JSON.stringify({
+        model: 'gpt-4o-mini',
+        messages: [
+          {
+            role: 'system',
+            content: `Du är en expert på att formatera transkript från YouTube-videor för bättre läsbarhet.
 
 Dina uppgifter:
 1. Dela upp texten i logiska stycken baserat på ämne eller tanke
@@ -31,17 +33,24 @@ Dina uppgifter:
 6. Returnera ENDAST den formaterade texten, ingen extra kommentar
 
 Svara på samma språk som transkriptet.`,
-        },
-        {
-          role: 'user',
-          content: `Formatera detta transkript från videon "${title}":\n\n${transcript}`,
-        },
-      ],
-      temperature: 0.3,
-      max_tokens: 16000,
+          },
+          {
+            role: 'user',
+            content: `Formatera detta transkript från videon "${title}":\n\n${transcript}`,
+          },
+        ],
+        temperature: 0.3,
+        max_tokens: 16000,
+      }),
     });
 
-    const formatted = response.choices[0]?.message?.content;
+    if (!response.ok) {
+      console.error('OpenAI API error:', response.status);
+      return transcript;
+    }
+
+    const data = await response.json();
+    const formatted = data.choices?.[0]?.message?.content;
 
     if (formatted && formatted.length > transcript.length * 0.5) {
       console.log(`AI formatting successful: ${transcript.length} -> ${formatted.length} chars`);
