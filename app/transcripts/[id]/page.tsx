@@ -112,9 +112,58 @@ export default function TranscriptViewPage() {
               )}
             </div>
 
-            <article className="bg-white p-8 rounded-xl shadow-sm border border-gray-200">
-              <div className="prose prose-gray max-w-none prose-headings:text-gray-900 prose-p:text-gray-700 prose-p:leading-relaxed prose-li:text-gray-700 prose-strong:text-gray-900 prose-a:text-blue-600">
-                <ReactMarkdown>{content || ''}</ReactMarkdown>
+            <article className="bg-white p-8 md:p-12 rounded-xl shadow-sm border border-gray-200">
+              <div className="transcript-content">
+                <ReactMarkdown
+                  components={{
+                    h1: ({ children }) => (
+                      <h1 className="text-2xl md:text-3xl font-bold text-gray-900 mb-4">
+                        {children}
+                      </h1>
+                    ),
+                    h2: ({ children }) => (
+                      <h2 className="text-xl font-semibold text-gray-800 mt-8 mb-4">
+                        {children}
+                      </h2>
+                    ),
+                    p: ({ children }) => (
+                      <p className="text-gray-700 text-lg leading-relaxed mb-6">
+                        {children}
+                      </p>
+                    ),
+                    blockquote: ({ children }) => (
+                      <blockquote className="border-l-4 border-blue-500 bg-blue-50 pl-4 py-3 my-6 text-gray-600">
+                        {children}
+                      </blockquote>
+                    ),
+                    a: ({ href, children }) => (
+                      <a
+                        href={href}
+                        className="text-blue-600 hover:text-blue-800 underline"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                      >
+                        {children}
+                      </a>
+                    ),
+                    strong: ({ children }) => (
+                      <strong className="font-semibold text-gray-900">
+                        {children}
+                      </strong>
+                    ),
+                    hr: () => <hr className="my-8 border-gray-200" />,
+                    ul: ({ children }) => (
+                      <ul className="list-disc list-inside space-y-2 mb-6 text-gray-700">
+                        {children}
+                      </ul>
+                    ),
+                    li: ({ children }) => (
+                      <li className="text-gray-700">{children}</li>
+                    ),
+                  }}
+                >
+                  {content || ''}
+                </ReactMarkdown>
               </div>
             </article>
           </>
