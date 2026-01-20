@@ -44,8 +44,10 @@ export default function TranscriptViewPage() {
         const text = await contentResponse.text();
         setContent(text);
 
-        // Kolla om redan formaterad (har ## rubriker eller **Talare**)
-        setIsFormatted(text.includes('\n## ') || text.includes('**Talare'));
+        // Kolla om redan AI-formaterad (har rubriker EFTER "## Transkript" eller talare-markeringar)
+        const transcriptSection = text.split('## Transkript')[1] || '';
+        const hasAIFormatting = transcriptSection.includes('\n## ') || transcriptSection.includes('**Talare');
+        setIsFormatted(hasAIFormatting);
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ett fel uppstod');
       } finally {
