@@ -22,6 +22,9 @@ export default function TranscriptViewPage() {
   const [adminKey, setAdminKey] = useState('');
   const [deleting, setDeleting] = useState(false);
   const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [summarizing, setSummarizing] = useState(false);
+  const [summarizeError, setSummarizeError] = useState<string | null>(null);
+  const [hasSummary, setHasSummary] = useState(false);
 
   useEffect(() => {
     async function fetchTranscript() {
@@ -53,6 +56,9 @@ export default function TranscriptViewPage() {
         const transcriptSection = text.split('## Transkript')[1] || '';
         const hasAIFormatting = transcriptSection.includes('\n## ') || transcriptSection.includes('**Talare');
         setIsFormatted(hasAIFormatting);
+
+        // Kolla om redan har sammanfattning
+        setHasSummary(text.includes('## Sammanfattning') || text.includes('## Summary'));
       } catch (err) {
         setError(err instanceof Error ? err.message : 'Ett fel uppstod');
       } finally {
@@ -128,6 +134,42 @@ export default function TranscriptViewPage() {
     }
   };
 
+  const handleSummarize = async () => {
+    if (!blobUrl || summarizing) return;
+
+    setSummarizing(true);
+    setSummarizeError(null);
+
+    try {
+      const response = await fetch('/api/summarize', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blobUrl, title }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Sammanfattning misslyckades');
+      }
+
+      // Hämta det nya innehållet
+      if (data.newUrl) {
+        const newContentResponse = await fetch(data.newUrl);
+        if (newContentResponse.ok) {
+          const newText = await newContentResponse.text();
+          setContent(newText);
+          setBlobUrl(data.newUrl);
+          setHasSummary(true);
+        }
+      }
+    } catch (err) {
+      setSummarizeError(err instanceof Error ? err.message : 'Ett fel uppstod');
+    } finally {
+      setSummarizing(false);
+    }
+  };
+
   return (
     <main className="min-h-screen py-12 px-4">
       <div className="max-w-3xl mx-auto">
@@ -189,7 +231,33 @@ export default function TranscriptViewPage() {
                         >
                           <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                         </svg>
-                        Formatera med AI
+                        Formatera
+                      </>
+                    )}
+                  </button>
+                )}
+                {!hasSummary && (
+                  <button
+                    onClick={handleSummarize}
+                    disabled={summarizing}
+                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {summarizing ? (
+                      <>
+                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                        Sammanfattar...
+                      </>
+                    ) : (
+                      <>
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="h-4 w-4"
+                          viewBox="0 0 20 20"
+                          fill="currentColor"
+                        >
+                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                        </svg>
+                        Sammanfatta
                       </>
                     )}
                   </button>
@@ -236,9 +304,9 @@ export default function TranscriptViewPage() {
               </div>
             </div>
 
-            {formatError && (
+            {(formatError || summarizeError) && (
               <div className="mb-4 p-4 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                {formatError}
+                {formatError || summarizeError}
               </div>
             )}
 
