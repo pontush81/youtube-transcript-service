@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube';
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
+import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 
-// Kör som Edge Function för bättre YouTube-kompatibilitet
-export const runtime = 'edge';
+// Remove edge runtime - Vercel Postgres doesn't work with Edge
+// export const runtime = 'edge';
 
 interface TranscriptRequest {
   url: string;
@@ -77,11 +78,26 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Generate and save embeddings for chat functionality
+    let chunksCreated = 0;
+    try {
+      chunksCreated = await saveTranscriptEmbeddings({
+        blobUrl: downloadUrl,
+        videoId,
+        videoTitle: title,
+        markdownContent: markdown,
+      });
+    } catch (error) {
+      // Log but don't fail - embeddings are optional
+      console.error('Failed to create embeddings:', error);
+    }
+
     return NextResponse.json({
       success: true,
       videoId,
       title,
       downloadUrl,
+      chunksCreated,
       preview: transcript.substring(0, 500) + (transcript.length > 500 ? '...' : ''),
     });
   } catch {
