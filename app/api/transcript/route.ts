@@ -79,14 +79,19 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate and save embeddings for chat functionality
-    let chunksCreated = 0;
+    let embeddingResult = { chunksCreated: 0, valid: false, reason: '' };
     try {
-      chunksCreated = await saveTranscriptEmbeddings({
+      const result = await saveTranscriptEmbeddings({
         blobUrl: downloadUrl,
         videoId,
         videoTitle: title,
         markdownContent: markdown,
       });
+      embeddingResult = {
+        chunksCreated: result.chunksCreated,
+        valid: result.validation.valid,
+        reason: result.validation.reason || '',
+      };
     } catch (error) {
       // Log but don't fail - embeddings are optional
       console.error('Failed to create embeddings:', error);
@@ -97,7 +102,9 @@ export async function POST(request: NextRequest) {
       videoId,
       title,
       downloadUrl,
-      chunksCreated,
+      chunksCreated: embeddingResult.chunksCreated,
+      embeddingStatus: embeddingResult.valid ? 'indexed' : 'skipped',
+      embeddingReason: embeddingResult.reason || undefined,
       preview: transcript.substring(0, 500) + (transcript.length > 500 ? '...' : ''),
     });
   } catch {

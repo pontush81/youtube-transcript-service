@@ -1,5 +1,6 @@
 import { list } from '@vercel/blob';
 import { NextResponse } from 'next/server';
+import { extractYouTubeVideoId } from '@/lib/video-utils';
 
 export const runtime = 'edge';
 
@@ -11,7 +12,7 @@ export interface TranscriptItem {
   size: number;
 }
 
-// Extrahera titel från Markdown-innehåll (första raden är alltid "# {title}")
+// Extract title from Markdown content (first line is always "# {title}")
 function extractTitleFromMarkdown(content: string): string | null {
   const firstLine = content.split('\n')[0];
   if (firstLine?.startsWith('# ')) {
@@ -24,20 +25,36 @@ export async function GET() {
   try {
     const { blobs } = await list({ prefix: 'transcripts/' });
 
-    // Hämta titel från varje fil
-    const transcripts: TranscriptItem[] = await Promise.all(
-      blobs.map(async (blob) => {
-        // Filnamn är: transcripts/{videoId}-{timestamp}.md
-        const filename = blob.pathname.replace('transcripts/', '').replace('.md', '');
-        const parts = filename.split('-');
-        const videoId = parts.slice(0, -1).join('-');
+    // Map to store unique videos by normalized ID (keep newest)
+    const videoMap = new Map<string, {
+      blob: typeof blobs[0];
+      normalizedId: string;
+    }>();
 
-        // Hämta titeln från filinnehållet
-        let title = videoId; // Fallback till videoId
+    // Sort blobs by upload date (newest first) before processing
+    const sortedBlobs = [...blobs].sort((a, b) =>
+      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+    );
+
+    // Keep only the newest blob for each normalized video ID
+    for (const blob of sortedBlobs) {
+      const filename = blob.pathname.replace('transcripts/', '').replace('.md', '');
+      const normalizedId = extractYouTubeVideoId(filename);
+
+      // Only keep first (newest) occurrence of each video
+      if (!videoMap.has(normalizedId)) {
+        videoMap.set(normalizedId, { blob, normalizedId });
+      }
+    }
+
+    // Fetch titles for unique videos
+    const transcripts: TranscriptItem[] = await Promise.all(
+      Array.from(videoMap.values()).map(async ({ blob, normalizedId }) => {
+        let title = normalizedId; // Fallback to videoId
+
         try {
           const response = await fetch(blob.url);
           if (response.ok) {
-            // Läs bara första 500 bytes för att få titeln
             const text = await response.text();
             const extractedTitle = extractTitleFromMarkdown(text);
             if (extractedTitle) {
@@ -45,11 +62,11 @@ export async function GET() {
             }
           }
         } catch {
-          // Om fil inte kan hämtas, använd videoId
+          // If file can't be fetched, use videoId
         }
 
         return {
-          videoId,
+          videoId: normalizedId,
           title,
           url: blob.url,
           uploadedAt: blob.uploadedAt,
@@ -58,7 +75,7 @@ export async function GET() {
       })
     );
 
-    // Sortera med senaste först
+    // Sort by upload date (newest first)
     transcripts.sort((a, b) =>
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     );
