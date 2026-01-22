@@ -29,8 +29,6 @@ export async function POST(request: NextRequest) {
     const relevantChunks = await searchTranscripts({
       query: message,
       videoIds: selectedVideos,
-      minSimilarity: 0.7,
-      maxChunksPerVideo: 5,
     });
 
     // Get AI provider

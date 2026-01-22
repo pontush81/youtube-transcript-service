@@ -17,7 +17,7 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
   const {
     query,
     videoIds,
-    minSimilarity = 0.7,
+    minSimilarity = 0.3,
     maxChunksPerVideo = 5
   } = params;
 
@@ -31,46 +31,49 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
   let results;
 
   if (videoIds === 'all') {
-    results = await sql`
-      WITH ranked AS (
+    // Use sql.query() for explicit parameterization with vector type
+    results = await sql.query(
+      `WITH ranked AS (
         SELECT
           video_id,
           video_title,
           content,
           timestamp_start,
-          1 - (embedding <=> ${embeddingStr}::vector) as similarity,
-          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> ${embeddingStr}::vector) as rn
+          1 - (embedding <=> $1::vector) as similarity,
+          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> $1::vector) as rn
         FROM transcript_chunks
-        WHERE 1 - (embedding <=> ${embeddingStr}::vector) >= ${minSimilarity}
+        WHERE 1 - (embedding <=> $1::vector) >= $2
       )
       SELECT video_id, video_title, content, timestamp_start, similarity
       FROM ranked
-      WHERE rn <= ${maxChunksPerVideo}
+      WHERE rn <= $3
       ORDER BY similarity DESC
-      LIMIT 20
-    `;
+      LIMIT 20`,
+      [embeddingStr, minSimilarity, maxChunksPerVideo]
+    );
   } else {
     // Convert array to PostgreSQL array literal format
     const videoIdsArray = `{${videoIds.join(',')}}`;
-    results = await sql`
-      WITH ranked AS (
+    results = await sql.query(
+      `WITH ranked AS (
         SELECT
           video_id,
           video_title,
           content,
           timestamp_start,
-          1 - (embedding <=> ${embeddingStr}::vector) as similarity,
-          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> ${embeddingStr}::vector) as rn
+          1 - (embedding <=> $1::vector) as similarity,
+          ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> $1::vector) as rn
         FROM transcript_chunks
-        WHERE video_id = ANY(${videoIdsArray}::text[])
-          AND 1 - (embedding <=> ${embeddingStr}::vector) >= ${minSimilarity}
+        WHERE video_id = ANY($4::text[])
+          AND 1 - (embedding <=> $1::vector) >= $2
       )
       SELECT video_id, video_title, content, timestamp_start, similarity
       FROM ranked
-      WHERE rn <= ${maxChunksPerVideo}
+      WHERE rn <= $3
       ORDER BY similarity DESC
-      LIMIT 20
-    `;
+      LIMIT 20`,
+      [embeddingStr, minSimilarity, maxChunksPerVideo, videoIdsArray]
+    );
   }
 
   return results.rows.map(row => ({
