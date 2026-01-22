@@ -52,7 +52,8 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
       [embeddingStr, minSimilarity, maxChunksPerVideo]
     );
   } else {
-    // Convert array to PostgreSQL array literal format
+    // When specific videos are selected, don't apply similarity threshold
+    // Users explicitly want results from these videos
     const videoIdsArray = `{${videoIds.join(',')}}`;
     results = await sql.query(
       `WITH ranked AS (
@@ -64,15 +65,14 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
           1 - (embedding <=> $1::vector) as similarity,
           ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> $1::vector) as rn
         FROM transcript_chunks
-        WHERE video_id = ANY($4::text[])
-          AND 1 - (embedding <=> $1::vector) >= $2
+        WHERE video_id = ANY($3::text[])
       )
       SELECT video_id, video_title, content, timestamp_start, similarity
       FROM ranked
-      WHERE rn <= $3
+      WHERE rn <= $2
       ORDER BY similarity DESC
       LIMIT 20`,
-      [embeddingStr, minSimilarity, maxChunksPerVideo, videoIdsArray]
+      [embeddingStr, maxChunksPerVideo, videoIdsArray]
     );
   }
 
