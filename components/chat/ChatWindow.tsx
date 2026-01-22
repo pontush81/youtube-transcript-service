@@ -13,6 +13,7 @@ export function ChatWindow() {
   const [selectedVideos, setSelectedVideos] = useState<string[] | 'all'>('all');
   const [mode, setMode] = useState<'strict' | 'hybrid'>('strict');
   const [loadingVideos, setLoadingVideos] = useState(true);
+  const [showMobileSelector, setShowMobileSelector] = useState(false);
 
   const { messages, isLoading, error, sendMessage, clearMessages } = useChat({
     selectedVideos,
@@ -40,9 +41,14 @@ export function ChatWindow() {
     fetchVideos();
   }, []);
 
+  // Count selected videos for mobile button
+  const selectedCount = selectedVideos === 'all'
+    ? videos.length
+    : selectedVideos.length;
+
   return (
     <div className="flex h-[calc(100vh-8rem)] bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      {/* Sidebar - Video selector */}
+      {/* Sidebar - Video selector (desktop) */}
       <div className="w-72 flex-shrink-0 hidden md:block">
         {loadingVideos ? (
           <div className="flex items-center justify-center h-full">
@@ -57,12 +63,56 @@ export function ChatWindow() {
         )}
       </div>
 
+      {/* Mobile video selector drawer */}
+      {showMobileSelector && (
+        <div className="fixed inset-0 z-50 md:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/50"
+            onClick={() => setShowMobileSelector(false)}
+          />
+          {/* Drawer */}
+          <div className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl">
+            <div className="flex items-center justify-between p-4 border-b border-gray-200">
+              <h2 className="font-semibold text-gray-900">Välj videor</h2>
+              <button
+                onClick={() => setShowMobileSelector(false)}
+                className="p-2 text-gray-500 hover:text-gray-700"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+              </button>
+            </div>
+            <div className="h-[calc(100%-4rem)] overflow-y-auto">
+              <VideoSelector
+                videos={videos}
+                selectedVideos={selectedVideos}
+                onChange={setSelectedVideos}
+              />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main chat area */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
         <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h1 className="font-semibold text-gray-900">Transcript Chat</h1>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            {/* Mobile video selector button */}
+            <button
+              onClick={() => setShowMobileSelector(true)}
+              className="md:hidden flex items-center gap-1.5 px-3 py-1.5 text-sm bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>{selectedCount} video{selectedCount !== 1 ? 's' : ''}</span>
+            </button>
+            <h1 className="font-semibold text-gray-900 hidden sm:block">Transcript Chat</h1>
+          </div>
+          <div className="flex items-center gap-2 sm:gap-4">
             <ModeToggle mode={mode} onChange={setMode} />
             {messages.length > 0 && (
               <button
