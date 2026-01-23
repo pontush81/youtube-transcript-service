@@ -5,7 +5,7 @@ import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
@@ -111,12 +111,12 @@ export async function POST(request: NextRequest) {
     }
 
     // Link transcript to user if logged in
-    const session = await auth();
-    if (session?.user?.id) {
+    const { userId } = await auth();
+    if (userId) {
       try {
         await sql`
           INSERT INTO user_transcripts (user_id, video_id, blob_url, is_public)
-          VALUES (${session.user.id}, ${videoId}, ${downloadUrl}, true)
+          VALUES (${userId}, ${videoId}, ${downloadUrl}, true)
           ON CONFLICT (user_id, video_id) DO UPDATE SET
             blob_url = EXCLUDED.blob_url,
             is_public = EXCLUDED.is_public
