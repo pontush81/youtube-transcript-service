@@ -53,6 +53,34 @@ components/
 └── DownloadButton.tsx
 ```
 
+## Admin Management
+
+### Setting Up First Admin
+```bash
+# Requires CLERK_SECRET_KEY in .env.local
+npm run set-admin your-email@example.com
+```
+
+### Admin API Endpoints
+All require either `x-admin-key` header OR Clerk admin role.
+
+- `GET /api/admin/users` - List all users with roles
+- `PATCH /api/admin/users` - Update user role
+  ```json
+  { "userId": "user_xxx", "role": "admin" }
+  ```
+
+### Admin-Protected Routes
+- `/api/db/setup` - Database initialization
+- `/api/db/migrate-*` - Database migrations
+- `/api/embeddings/backfill` - Rebuild embeddings
+- `/api/metadata/backfill` - Fetch missing metadata
+
+### User Roles
+Stored in Clerk `publicMetadata.role`:
+- `admin` - Full access to all routes and user management
+- `user` (default) - Can only manage own transcripts
+
 ## Begränsningar
 - Supadata gratis: 100 videos/månad
 - Uppgradera på https://supadata.ai för fler
