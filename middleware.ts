@@ -1,7 +1,10 @@
+import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
-// Security headers middleware
+const isProtectedRoute = createRouteMatcher(['/chat(.*)']);
+const isAuthRoute = createRouteMatcher(['/login(.*)', '/sign-in(.*)', '/sign-up(.*)']);
+
+// Security headers
 function addSecurityHeaders(response: NextResponse) {
   const headers = response.headers;
 
@@ -24,7 +27,6 @@ function addSecurityHeaders(response: NextResponse) {
   );
 
   // HSTS - enforce HTTPS (1 year, include subdomains)
-  // Only set in production
   if (process.env.NODE_ENV === 'production') {
     headers.set(
       'Strict-Transport-Security',
@@ -32,18 +34,17 @@ function addSecurityHeaders(response: NextResponse) {
     );
   }
 
-  // Content Security Policy
-  // Allow inline scripts/styles for Next.js, restrict other sources
+  // Content Security Policy - updated for Clerk
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.clerk.accounts.dev",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://accounts.google.com https://api.resend.com",
-    "frame-src 'self' https://www.youtube.com https://accounts.google.com",
+    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://*.clerk.accounts.dev https://*.clerk.com",
+    "frame-src 'self' https://www.youtube.com https://*.clerk.accounts.dev",
     "frame-ancestors 'none'",
-    "form-action 'self' https://accounts.google.com",
+    "form-action 'self' https://*.clerk.accounts.dev",
     "base-uri 'self'",
     "object-src 'none'",
   ].join('; ');
@@ -53,48 +54,29 @@ function addSecurityHeaders(response: NextResponse) {
   return response;
 }
 
-// Routes that require authentication
-const protectedRoutes = ['/chat'];
+export default clerkMiddleware(async (auth, req) => {
+  const { userId } = await auth();
 
-// Routes that should redirect to home if already authenticated
-const authRoutes = ['/login'];
-
-export async function middleware(request: NextRequest) {
-  const { pathname } = request.nextUrl;
-
-  // Check if user is authenticated via session cookie
-  const sessionCookie = request.cookies.get('authjs.session-token') ||
-                        request.cookies.get('__Secure-authjs.session-token');
-  const isAuthenticated = !!sessionCookie;
-
-  // Redirect authenticated users away from auth routes
-  if (isAuthenticated && authRoutes.some(route => pathname.startsWith(route))) {
-    return NextResponse.redirect(new URL('/', request.url));
+  // Redirect authenticated users away from auth routes (except sign-in/sign-up which Clerk handles)
+  if (isAuthRoute(req) && userId && req.nextUrl.pathname.startsWith('/login')) {
+    return NextResponse.redirect(new URL('/', req.url));
   }
 
-  // Redirect unauthenticated users to login for protected routes
-  if (!isAuthenticated && protectedRoutes.some(route => pathname.startsWith(route))) {
-    const loginUrl = new URL('/login', request.url);
-    loginUrl.searchParams.set('callbackUrl', pathname);
-    return NextResponse.redirect(loginUrl);
+  // Protect /chat route
+  if (isProtectedRoute(req) && !userId) {
+    return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
-  // Add security headers to response
+  // Add security headers
   const response = NextResponse.next();
   return addSecurityHeaders(response);
-}
+});
 
-// Apply middleware to all routes except static files
 export const config = {
   matcher: [
-    /*
-     * Match all request paths except:
-     * - _next/static (static files)
-     * - _next/image (image optimization files)
-     * - favicon.ico (favicon file)
-     * - public folder
-     * - api/auth (NextAuth routes need to handle their own auth)
-     */
-    '/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    // Skip Next.js internals and static files
+    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
+    // Always run for API routes
+    '/(api|trpc)(.*)',
   ],
 };
