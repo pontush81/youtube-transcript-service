@@ -8,7 +8,6 @@ interface NavItem {
   href: string;
   label: string;
   icon: React.ReactNode;
-  requiresAuth?: boolean;
 }
 
 const navItems: NavItem[] = [
@@ -33,7 +32,6 @@ const navItems: NavItem[] = [
   {
     href: '/chat',
     label: 'Chatt',
-    requiresAuth: true,
     icon: (
       <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
@@ -77,11 +75,6 @@ export function NavHeader() {
                   >
                     {item.icon}
                     <span className="hidden xs:inline sm:inline">{item.label}</span>
-                    {item.requiresAuth && !user && (
-                      <svg className="w-3 h-3 text-gray-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
-                      </svg>
-                    )}
                   </Link>
                 );
               })}
