@@ -1,5 +1,7 @@
 # YouTube Transcript Service
 
+> **Påminnelse:** Kolla `docs/TODO.md` för pågående arbete och nästa steg.
+
 ## Snabbstart
 ```bash
 npm install
