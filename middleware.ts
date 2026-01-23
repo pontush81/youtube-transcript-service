@@ -37,12 +37,13 @@ function addSecurityHeaders(response: NextResponse) {
   // Content Security Policy - updated for Clerk
   const csp = [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.clerk.accounts.dev",
+    "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://va.vercel-scripts.com https://*.clerk.accounts.dev https://*.clerk.com https://challenges.cloudflare.com",
+    "worker-src 'self' blob:",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://*.clerk.accounts.dev https://*.clerk.com",
-    "frame-src 'self' https://www.youtube.com https://*.clerk.accounts.dev",
+    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://*.clerk.accounts.dev https://*.clerk.com https://clerk-telemetry.com",
+    "frame-src 'self' https://www.youtube.com https://*.clerk.accounts.dev https://challenges.cloudflare.com",
     "frame-ancestors 'none'",
     "form-action 'self' https://*.clerk.accounts.dev",
     "base-uri 'self'",
