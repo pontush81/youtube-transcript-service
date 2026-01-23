@@ -7,6 +7,7 @@ import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { chatRequestSchema, parseRequest } from '@/lib/validations';
 import { useCredit, hasCredits } from '@/lib/credits';
+import { isUserAdmin } from '@/lib/admin';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -24,16 +25,21 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Credit check
-  const userHasCredits = await hasCredits(userId);
-  if (!userHasCredits) {
-    return new Response(
-      JSON.stringify({
-        error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
-        code: 'NO_CREDITS'
-      }),
-      { status: 402, headers: { 'Content-Type': 'application/json' } }
-    );
+  // Check if user is admin (admins skip credit checks)
+  const isAdmin = await isUserAdmin(userId);
+
+  // Credit check (skip for admins)
+  if (!isAdmin) {
+    const userHasCredits = await hasCredits(userId);
+    if (!userHasCredits) {
+      return new Response(
+        JSON.stringify({
+          error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
+          code: 'NO_CREDITS'
+        }),
+        { status: 402, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
   }
 
   // Rate limiting
@@ -90,16 +96,18 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: message },
     ];
 
-    // Deduct credit for this chat request
-    const creditUsed = await useCredit(userId);
-    if (!creditUsed) {
-      return new Response(
-        JSON.stringify({
-          error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
-          code: 'NO_CREDITS'
-        }),
-        { status: 402, headers: { 'Content-Type': 'application/json' } }
-      );
+    // Deduct credit for this chat request (skip for admins)
+    if (!isAdmin) {
+      const creditUsed = await useCredit(userId);
+      if (!creditUsed) {
+        return new Response(
+          JSON.stringify({
+            error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
+            code: 'NO_CREDITS'
+          }),
+          { status: 402, headers: { 'Content-Type': 'application/json' } }
+        );
+      }
     }
 
     // Create streaming response
