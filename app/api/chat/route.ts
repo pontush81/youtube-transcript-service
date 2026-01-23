@@ -6,6 +6,7 @@ import { Message } from '@/lib/ai/types';
 import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { chatRequestSchema, parseRequest } from '@/lib/validations';
+import { useCredit, hasCredits } from '@/lib/credits';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -22,6 +23,19 @@ export async function POST(request: NextRequest) {
       { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
   }
+
+  // Credit check
+  const userHasCredits = await hasCredits(userId);
+  if (!userHasCredits) {
+    return new Response(
+      JSON.stringify({
+        error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
+        code: 'NO_CREDITS'
+      }),
+      { status: 402, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
+
   // Rate limiting
   const clientId = getClientIdentifier(request);
   const rateLimit = await checkRateLimit('chat', clientId);
@@ -75,6 +89,18 @@ export async function POST(request: NextRequest) {
       ...conversationHistory,
       { role: 'user', content: message },
     ];
+
+    // Deduct credit for this chat request
+    const creditUsed = await useCredit(userId);
+    if (!creditUsed) {
+      return new Response(
+        JSON.stringify({
+          error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
+          code: 'NO_CREDITS'
+        }),
+        { status: 402, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
 
     // Create streaming response
     const encoder = new TextEncoder();
