@@ -6,7 +6,8 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "set-admin": "tsx scripts/set-admin.ts"
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.1",
@@ -30,7 +31,9 @@
     "zod": "^4.3.6"
   },
   "devDependencies": {
+    "@clerk/backend": "^1.21.0",
     "@types/node": "^22",
+    "tsx": "^4.19.0",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "dotenv": "^17.2.3",
