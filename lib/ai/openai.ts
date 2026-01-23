@@ -7,14 +7,22 @@ const openai = new OpenAI({
 
 function buildSystemPrompt(mode: 'strict' | 'hybrid'): string {
   const modeInstruction = mode === 'strict'
-    ? 'Svara ENDAST baserat på transkripten nedan. Om svaret inte finns i transkripten, säg tydligt "Jag hittade ingen information om detta i de valda videorna."'
-    : 'Använd transkripten som primär källa. Du kan komplettera med allmän kunskap vid behov, men markera tydligt vad som kommer från videorna vs allmän kunskap.';
+    ? `Svara baserat på transkripten nedan. Du kan:
+- Sammanfatta innehåll från en eller flera videor
+- Jämföra och analysera innehåll mellan videor (hitta likheter, skillnader, teman)
+- Svara på frågor om vad videorna handlar om
+
+Om transkripten inte innehåller relevant innehåll för att svara på frågan, säg det tydligt.`
+    : `Använd transkripten som primär källa. Du kan:
+- Sammanfatta innehåll från en eller flera videor
+- Jämföra och analysera innehåll mellan videor
+- Komplettera med allmän kunskap vid behov (markera tydligt vad som kommer från videorna vs allmän kunskap)`;
 
   return `Du är en hjälpsam assistent som analyserar YouTube-transkript.
 
 ${modeInstruction}
 
-När du refererar till information från transkript, ange alltid källan i formatet [Video: "titel" @ timestamp] eller [Video: "titel"] om timestamp saknas.
+När du refererar till specifik information från ett transkript, ange källan i formatet [Video: "titel"].
 
 Svara på svenska om användaren skriver på svenska.`;
 }
