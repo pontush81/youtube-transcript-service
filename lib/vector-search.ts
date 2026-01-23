@@ -31,7 +31,9 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
   let results;
 
   if (videoIds === 'all') {
-    // Use sql.query() for explicit parameterization with vector type
+    // Ensure at least 1 chunk per video is included (the best match),
+    // plus additional chunks that meet the similarity threshold.
+    // This ensures broad queries like "summarize all videos" include every video.
     results = await sql.query(
       `WITH ranked AS (
         SELECT
@@ -42,13 +44,13 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
           1 - (embedding <=> $1::vector) as similarity,
           ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> $1::vector) as rn
         FROM transcript_chunks
-        WHERE 1 - (embedding <=> $1::vector) >= $2
       )
       SELECT video_id, video_title, content, timestamp_start, similarity
       FROM ranked
-      WHERE rn <= $3
+      WHERE rn = 1  -- Always include best chunk per video
+         OR (rn <= $3 AND similarity >= $2)  -- Plus more if they meet threshold
       ORDER BY similarity DESC
-      LIMIT 20`,
+      LIMIT 40`,
       [embeddingStr, minSimilarity, maxChunksPerVideo]
     );
   } else {
