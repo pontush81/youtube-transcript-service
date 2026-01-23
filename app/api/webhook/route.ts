@@ -3,7 +3,7 @@ import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube'
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 
-export const runtime = 'edge';
+// Removed edge runtime - youtube-transcript requires Node.js
 
 export async function GET(request: NextRequest) {
   const searchParams = request.nextUrl.searchParams;
