@@ -10,6 +10,8 @@
   },
   "dependencies": {
     "@auth/pg-adapter": "^1.11.1",
+    "@clerk/localizations": "^3.35.1",
+    "@clerk/nextjs": "^6.36.9",
     "@tailwindcss/postcss": "^4.1.18",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.36.1",
@@ -24,6 +26,7 @@
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
     "resend": "^6.8.0",
+    "svix": "^1.84.1",
     "swr": "^2.3.8",
     "youtube-transcript": "^1.2.1",
     "zod": "^4.3.6"
