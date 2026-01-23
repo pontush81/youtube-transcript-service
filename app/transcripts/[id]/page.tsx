@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import Link from 'next/link';
 import ReactMarkdown from 'react-markdown';
+import { TranscriptDetailSkeleton } from '@/components/Skeleton';
 
 export default function TranscriptViewPage() {
   const params = useParams();
@@ -181,10 +182,7 @@ export default function TranscriptViewPage() {
     <main className="min-h-screen py-12 px-4">
       <div className="max-w-3xl mx-auto">
         {loading ? (
-          <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center">
-            <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
-            <p className="text-gray-500">Laddar transkript...</p>
-          </div>
+          <TranscriptDetailSkeleton />
         ) : error ? (
           <div className="bg-white p-8 rounded-xl shadow-sm border border-gray-200 text-center">
             <p className="text-red-600 mb-4">{error}</p>

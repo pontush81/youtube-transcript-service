@@ -1,39 +1,13 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-
-interface TranscriptItem {
-  videoId: string;
-  title: string;
-  url: string;
-  uploadedAt: string;
-  size: number;
-}
+import { TranscriptListSkeleton } from '@/components/Skeleton';
+import { useTranscripts } from '@/lib/hooks/useTranscripts';
 
 export default function TranscriptsPage() {
-  const [transcripts, setTranscripts] = useState<TranscriptItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    async function fetchTranscripts() {
-      try {
-        const response = await fetch('/api/transcripts');
-        if (!response.ok) {
-          throw new Error('Kunde inte hämta transkript');
-        }
-        const data = await response.json();
-        setTranscripts(data.transcripts);
-      } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ett fel uppstod');
-      } finally {
-        setLoading(false);
-      }
-    }
-
-    fetchTranscripts();
-  }, []);
+  const { transcripts, isLoading: loading, error } = useTranscripts();
+  const [searchQuery, setSearchQuery] = useState('');
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE', {
@@ -50,6 +24,11 @@ export default function TranscriptsPage() {
     if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
+
+  // Filter transcripts by search query
+  const filteredTranscripts = transcripts.filter((transcript) =>
+    transcript.title.toLowerCase().includes(searchQuery.toLowerCase())
+  );
 
   return (
     <main className="py-4 sm:py-8 px-4">
@@ -74,11 +53,43 @@ export default function TranscriptsPage() {
           </Link>
         </div>
 
+        {/* Search input */}
+        {!loading && transcripts.length > 0 && (
+          <div className="mb-4">
+            <div className="relative">
+              <svg
+                className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+              </svg>
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                placeholder="Sök transkript..."
+                className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
+              />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                  </svg>
+                </button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
           {loading ? (
-            <div className="p-8 text-center">
-              <div className="animate-spin inline-block w-8 h-8 border-4 border-blue-600 border-t-transparent rounded-full mb-4"></div>
-              <p className="text-gray-500">Laddar transkript...</p>
+            <div className="p-4">
+              <TranscriptListSkeleton />
             </div>
           ) : error ? (
             <div className="p-8 text-center">
@@ -100,9 +111,19 @@ export default function TranscriptsPage() {
                 Hämta ditt första transkript
               </Link>
             </div>
+          ) : filteredTranscripts.length === 0 ? (
+            <div className="p-8 text-center">
+              <p className="text-gray-500 mb-2">Inga transkript matchar &quot;{searchQuery}&quot;</p>
+              <button
+                onClick={() => setSearchQuery('')}
+                className="text-blue-600 hover:text-blue-800 underline text-sm"
+              >
+                Rensa sökning
+              </button>
+            </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {transcripts.map((transcript, index) => (
+              {filteredTranscripts.map((transcript, index) => (
                 <li key={index}>
                   <Link
                     href={`/transcripts/${transcript.videoId}`}

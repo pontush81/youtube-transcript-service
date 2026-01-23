@@ -4,16 +4,10 @@ import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { checkRateLimit, RATE_LIMITS, getClientIdentifier } from '@/lib/rate-limit';
+import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
 // export const runtime = 'edge';
-
-interface TranscriptRequest {
-  url: string;
-  submitter?: string;
-  tags?: string[];
-  notes?: string;
-}
 
 export async function POST(request: NextRequest) {
   // Rate limiting
@@ -32,16 +26,17 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body: TranscriptRequest = await request.json();
-    const { url, submitter, tags, notes } = body;
+    const rawBody = await request.json();
+    const parsed = parseRequest(transcriptSubmitSchema, rawBody);
 
-    if (!url) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'YouTube URL krävs' },
+        { success: false, error: parsed.error },
         { status: 400 }
       );
     }
 
+    const { url, submitter, tags, notes } = parsed.data;
     const videoId = extractVideoId(url);
 
     if (!videoId) {

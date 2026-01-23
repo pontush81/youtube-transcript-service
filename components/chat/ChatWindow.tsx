@@ -14,6 +14,7 @@ export function ChatWindow() {
   const [mode, setMode] = useState<'strict' | 'hybrid'>('strict');
   const [loadingVideos, setLoadingVideos] = useState(true);
   const [showMobileSelector, setShowMobileSelector] = useState(false);
+  const [showClearConfirm, setShowClearConfirm] = useState(false);
 
   const { messages, isLoading, error, sendMessage, clearMessages } = useChat({
     selectedVideos,
@@ -114,7 +115,7 @@ export function ChatWindow() {
             <ModeToggle mode={mode} onChange={setMode} />
             {messages.length > 0 && (
               <button
-                onClick={clearMessages}
+                onClick={() => setShowClearConfirm(true)}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
                 title="Rensa chatt"
               >
@@ -139,6 +140,37 @@ export function ChatWindow() {
         {/* Input */}
         <MessageInput onSend={sendMessage} disabled={isLoading} />
       </div>
+
+      {/* Clear chat confirmation dialog */}
+      {showClearConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
+          <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
+            <h3 className="text-lg font-semibold text-gray-900 mb-2">
+              Rensa chatten?
+            </h3>
+            <p className="text-gray-600 mb-4">
+              Alla meddelanden kommer att tas bort. Detta kan inte ångras.
+            </p>
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => setShowClearConfirm(false)}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
+              >
+                Avbryt
+              </button>
+              <button
+                onClick={() => {
+                  clearMessages();
+                  setShowClearConfirm(false);
+                }}
+                className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
+              >
+                Rensa
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

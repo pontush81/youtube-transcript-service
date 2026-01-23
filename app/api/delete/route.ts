@@ -1,23 +1,46 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
+import { timingSafeEqual } from 'crypto';
+import { deleteRequestSchema, parseRequest } from '@/lib/validations';
+
+// Timing-safe string comparison to prevent timing attacks
+function secureCompare(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') {
+    return false;
+  }
+
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+
+  // If lengths differ, compare against itself to maintain constant time
+  if (aBuffer.length !== bBuffer.length) {
+    timingSafeEqual(aBuffer, aBuffer);
+    return false;
+  }
+
+  return timingSafeEqual(aBuffer, bBuffer);
+}
 
 export async function POST(request: NextRequest) {
   try {
-    const { blobUrl, adminKey } = await request.json();
+    const rawBody = await request.json();
+    const parsed = parseRequest(deleteRequestSchema, rawBody);
 
-    // Enkel admin-kontroll
-    const validAdminKey = process.env.ADMIN_KEY;
-    if (!validAdminKey || adminKey !== validAdminKey) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Ogiltig admin-nyckel' },
-        { status: 401 }
+        { success: false, error: parsed.error },
+        { status: 400 }
       );
     }
 
-    if (!blobUrl) {
+    const { blobUrl, adminKey } = parsed.data;
+
+    // Secure admin key validation
+    const validAdminKey = process.env.ADMIN_KEY;
+    if (!validAdminKey || !secureCompare(adminKey, validAdminKey)) {
       return NextResponse.json(
-        { success: false, error: 'Blob URL krävs' },
-        { status: 400 }
+        { success: false, error: 'Ogiltig admin-nyckel' },
+        { status: 401 }
       );
     }
 

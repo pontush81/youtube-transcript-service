@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
+import { formatRequestSchema, parseRequest } from '@/lib/validations';
 
 // Vercel free tier har 10s timeout
 export const maxDuration = 10;
@@ -37,14 +38,17 @@ function simpleFormat(text: string): string {
 
 export async function POST(request: NextRequest) {
   try {
-    const { blobUrl, title } = await request.json();
+    const rawBody = await request.json();
+    const parsed = parseRequest(formatRequestSchema, rawBody);
 
-    if (!blobUrl) {
+    if (!parsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Blob URL krävs' },
+        { success: false, error: parsed.error },
         { status: 400 }
       );
     }
+
+    const { blobUrl, title } = parsed.data;
 
     // Hämta nuvarande innehåll
     const contentResponse = await fetch(blobUrl);

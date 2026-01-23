@@ -4,19 +4,13 @@ import { searchTranscripts } from '@/lib/vector-search';
 import { Message } from '@/lib/ai/types';
 import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
 import { checkRateLimit, RATE_LIMITS, getClientIdentifier } from '@/lib/rate-limit';
+import { chatRequestSchema, parseRequest } from '@/lib/validations';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
 
 // Limit conversation history to prevent token overflow
 const MAX_HISTORY_MESSAGES = 10;
-
-interface ChatRequest {
-  message: string;
-  conversationHistory: Message[];
-  selectedVideos: string[] | 'all';
-  mode: 'strict' | 'hybrid';
-}
 
 export async function POST(request: NextRequest) {
   // Rate limiting
@@ -41,26 +35,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const body: ChatRequest = await request.json();
-    const { message, conversationHistory: rawHistory, selectedVideos, mode } = body;
+    const rawBody = await request.json();
+    const parsed = parseRequest(chatRequestSchema, rawBody);
 
-    if (!message?.trim()) {
+    if (!parsed.success) {
       return new Response(
-        JSON.stringify({ error: 'Meddelande krävs' }),
+        JSON.stringify({ error: parsed.error }),
         { status: 400, headers: { 'Content-Type': 'application/json' } }
       );
     }
+
+    const { message, conversationHistory: rawHistory, selectedVideos, mode } = parsed.data;
 
     // Limit conversation history to last N messages
     const conversationHistory = rawHistory.slice(-MAX_HISTORY_MESSAGES);
-
-    // Handle empty selection edge case
-    if (Array.isArray(selectedVideos) && selectedVideos.length === 0) {
-      return new Response(
-        JSON.stringify({ error: 'Välj minst en video' }),
-        { status: 400, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
 
     // Rewrite query with conversation context for better search
     const searchQuery = await rewriteQueryWithContext(message, conversationHistory);

@@ -107,7 +107,14 @@ export async function GET() {
       new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
     );
 
-    return NextResponse.json({ transcripts });
+    return NextResponse.json(
+      { transcripts },
+      {
+        headers: {
+          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+        },
+      }
+    );
   } catch (error) {
     console.error('Error listing transcripts:', error);
     return NextResponse.json(
