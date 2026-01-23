@@ -72,9 +72,15 @@ export interface RateLimitResult {
   limit: number;
 }
 
+// Track Redis failures for circuit breaker
+let redisFailureCount = 0;
+let lastFailureTime = 0;
+const FAILURE_THRESHOLD = 3;
+const RECOVERY_TIME_MS = 60000; // 1 minute
+
 /**
  * Check rate limit for a specific endpoint type and identifier.
- * Falls back to allowing requests if Redis is not configured (dev mode).
+ * Implements circuit breaker pattern - fails closed after repeated Redis failures.
  */
 export async function checkRateLimit(
   type: RateLimitType,
@@ -82,8 +88,18 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const limiter = limiters[type];
 
-  // If Redis not configured, allow all requests (development mode)
+  // If Redis not configured, use in-memory fallback in dev only
   if (!limiter) {
+    if (process.env.NODE_ENV === 'production') {
+      console.error('CRITICAL: Rate limiting disabled in production!');
+      // Fail closed in production if Redis not configured
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: Date.now() + 60000,
+        limit: 0,
+      };
+    }
     console.warn(`Rate limiting disabled: Redis not configured. Type: ${type}`);
     return {
       allowed: true,
@@ -93,8 +109,26 @@ export async function checkRateLimit(
     };
   }
 
+  // Circuit breaker: if too many recent failures, fail closed
+  const now = Date.now();
+  if (redisFailureCount >= FAILURE_THRESHOLD) {
+    if (now - lastFailureTime < RECOVERY_TIME_MS) {
+      console.warn('Circuit breaker open: Rate limiting failing closed');
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: lastFailureTime + RECOVERY_TIME_MS,
+        limit: 0,
+      };
+    }
+    // Recovery time passed, reset counter
+    redisFailureCount = 0;
+  }
+
   try {
     const result = await limiter.limit(identifier);
+    // Success - reset failure counter
+    redisFailureCount = 0;
     return {
       allowed: result.success,
       remaining: result.remaining,
@@ -102,12 +136,26 @@ export async function checkRateLimit(
       limit: result.limit,
     };
   } catch (error) {
-    // On Redis error, fail open (allow request) but log
-    console.error('Rate limit check failed:', error);
+    // Track failure
+    redisFailureCount++;
+    lastFailureTime = now;
+    console.error(`Rate limit check failed (${redisFailureCount}/${FAILURE_THRESHOLD}):`, error);
+
+    // Fail closed after threshold
+    if (redisFailureCount >= FAILURE_THRESHOLD) {
+      return {
+        allowed: false,
+        remaining: 0,
+        resetAt: now + RECOVERY_TIME_MS,
+        limit: 0,
+      };
+    }
+
+    // Allow single failures but warn
     return {
       allowed: true,
       remaining: 1,
-      resetAt: Date.now() + 60000,
+      resetAt: now + 60000,
       limit: 30,
     };
   }
