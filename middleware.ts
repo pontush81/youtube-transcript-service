@@ -9,6 +9,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhook(.*)',    // Zapier webhook (uses API key)
   '/api/db/(.*)',        // Admin DB routes (use admin key)
   '/api/metadata/(.*)',  // Metadata backfill (use admin key)
+  '/api/admin/(.*)',     // Admin routes (use admin key or Clerk admin role)
 ]);
 
 // Security headers
