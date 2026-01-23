@@ -1,8 +1,10 @@
 import { list } from '@vercel/blob';
 import { NextResponse } from 'next/server';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
+import { sql } from '@/lib/db';
 
-export const runtime = 'edge';
+// Remove edge runtime - need nodejs for database access
+// export const runtime = 'edge';
 
 export interface TranscriptItem {
   videoId: string;
@@ -10,6 +12,7 @@ export interface TranscriptItem {
   url: string;
   uploadedAt: Date;
   size: number;
+  indexed: boolean;
 }
 
 // Extract title from Markdown content (first line is always "# {title}")
@@ -23,6 +26,16 @@ function extractTitleFromMarkdown(content: string): string | null {
 
 export async function GET() {
   try {
+    // Get cached titles from database (fast)
+    const cachedTitles = await sql`
+      SELECT DISTINCT ON (video_id) video_id, video_title, blob_url
+      FROM transcript_chunks
+      ORDER BY video_id, created_at DESC
+    `;
+    const titleCache = new Map(
+      cachedTitles.rows.map(r => [r.video_id, { title: r.video_title, blobUrl: r.blob_url }])
+    );
+
     const { blobs } = await list({ prefix: 'transcripts/' });
 
     // Map to store unique videos by normalized ID (keep newest)
@@ -47,11 +60,24 @@ export async function GET() {
       }
     }
 
-    // Fetch titles for unique videos
+    // Build transcripts list - use cached titles when available
     const transcripts: TranscriptItem[] = await Promise.all(
       Array.from(videoMap.values()).map(async ({ blob, normalizedId }) => {
-        let title = normalizedId; // Fallback to videoId
+        // Try to get title from cache first (fast path)
+        const cached = titleCache.get(normalizedId);
+        if (cached) {
+          return {
+            videoId: normalizedId,
+            title: cached.title,
+            url: blob.url,
+            uploadedAt: blob.uploadedAt,
+            size: blob.size,
+            indexed: true,
+          };
+        }
 
+        // Fallback: fetch from blob (slow path - only for non-indexed videos)
+        let title = normalizedId;
         try {
           const response = await fetch(blob.url);
           if (response.ok) {
@@ -71,6 +97,7 @@ export async function GET() {
           url: blob.url,
           uploadedAt: blob.uploadedAt,
           size: blob.size,
+          indexed: false,
         };
       })
     );

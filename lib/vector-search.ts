@@ -2,6 +2,12 @@ import { sql } from '@/lib/db';
 import { getAIProvider } from '@/lib/ai/provider';
 import { TranscriptChunk } from '@/lib/ai/types';
 
+// Sanitize video ID to prevent SQL injection
+// YouTube video IDs are 11 chars: alphanumeric, hyphens, underscores
+function sanitizeVideoId(id: string): string {
+  return id.replace(/[^a-zA-Z0-9_-]/g, '').slice(0, 11);
+}
+
 interface SearchParams {
   query: string;
   videoIds: string[] | 'all';
@@ -56,7 +62,12 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
   } else {
     // When specific videos are selected, don't apply similarity threshold
     // Users explicitly want results from these videos
-    const videoIdsArray = `{${videoIds.join(',')}}`;
+    // Sanitize video IDs to prevent SQL injection
+    const sanitizedIds = videoIds.map(sanitizeVideoId).filter(id => id.length > 0);
+    if (sanitizedIds.length === 0) {
+      return [];
+    }
+    const videoIdsArray = `{${sanitizedIds.join(',')}}`;
     results = await sql.query(
       `WITH ranked AS (
         SELECT

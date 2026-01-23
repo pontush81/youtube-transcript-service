@@ -3,6 +3,7 @@ import { list } from '@vercel/blob';
 import { sql } from '@/lib/db';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
+import { optimizeVectorIndex } from '@/lib/db-schema';
 
 export async function POST(request: Request) {
   try {
@@ -111,6 +112,16 @@ export async function POST(request: Request) {
     const skipped = results.filter(r => r.status.startsWith('skipped'));
     const errors = results.filter(r => r.status.startsWith('error'));
 
+    // Optimize vector index after bulk inserts
+    let indexOptimization = { rowCount: 0, lists: 0 };
+    if (indexed.length > 0) {
+      try {
+        indexOptimization = await optimizeVectorIndex();
+      } catch (error) {
+        console.error('Failed to optimize index:', error);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       summary: {
@@ -119,6 +130,7 @@ export async function POST(request: Request) {
         skipped: skipped.length,
         errors: errors.length,
         totalChunks: indexed.reduce((sum, r) => sum + (r.chunks || 0), 0),
+        indexOptimization,
       },
       results,
     });

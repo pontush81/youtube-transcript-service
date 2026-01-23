@@ -7,6 +7,7 @@ export interface Chunk {
 const TARGET_CHUNK_SIZE = 500; // tokens (roughly 2000 chars)
 const MAX_CHUNK_SIZE = 800; // tokens (roughly 3200 chars)
 const MIN_CHUNK_SIZE = 100; // tokens - don't create tiny chunks
+const OVERLAP_SIZE = 50; // tokens of overlap between chunks for context continuity
 
 // Rough token estimate: 1 token ≈ 4 characters for English
 function estimateTokens(text: string): number {
@@ -21,6 +22,30 @@ function extractTimestamp(text: string): string | null {
     return time;
   }
   return null;
+}
+
+// Extract the last ~OVERLAP_SIZE tokens worth of content for chunk overlap
+function extractOverlapContent(text: string): string {
+  const targetChars = OVERLAP_SIZE * 4; // Rough token-to-char estimate
+
+  if (text.length <= targetChars) {
+    return text;
+  }
+
+  // Try to find a sentence boundary near the overlap point
+  const lastPortion = text.slice(-targetChars * 1.5);
+  const sentenceMatch = lastPortion.match(/[.!?]\s+([A-Z])/);
+
+  if (sentenceMatch && sentenceMatch.index !== undefined) {
+    // Start from the sentence boundary
+    const overlapStart = lastPortion.length - (lastPortion.length - sentenceMatch.index - 2);
+    return lastPortion.slice(-overlapStart).trim();
+  }
+
+  // Fallback: just take the last portion at a word boundary
+  const words = text.split(/\s+/);
+  const targetWords = Math.ceil(OVERLAP_SIZE / 1.5); // ~1.5 tokens per word
+  return words.slice(-targetWords).join(' ');
 }
 
 // Split text into sentences (handles common abbreviations)
@@ -116,6 +141,7 @@ export function chunkTranscript(markdown: string): Chunk[] {
   let currentChunk = '';
   let currentTimestamp: string | null = null;
   let chunkIndex = 0;
+  let overlapContent = ''; // Content to prepend to next chunk for context continuity
 
   for (let i = 0; i < segments.length; i++) {
     const segment = segments[i];
@@ -138,8 +164,11 @@ export function chunkTranscript(markdown: string): Chunk[] {
       });
       chunkIndex++;
 
-      // Start new chunk (no overlap for cleaner chunks)
-      currentChunk = segment;
+      // Extract overlap content from end of current chunk
+      overlapContent = extractOverlapContent(currentChunk);
+
+      // Start new chunk with overlap for context continuity
+      currentChunk = overlapContent ? overlapContent + '\n\n' + segment : segment;
       currentTimestamp = segmentTimestamp;
     }
     // If current chunk reached target size, save it
@@ -151,7 +180,11 @@ export function chunkTranscript(markdown: string): Chunk[] {
       });
       chunkIndex++;
 
-      currentChunk = segment;
+      // Extract overlap content from end of current chunk
+      overlapContent = extractOverlapContent(currentChunk);
+
+      // Start new chunk with overlap
+      currentChunk = overlapContent ? overlapContent + '\n\n' + segment : segment;
       currentTimestamp = segmentTimestamp;
     }
     // Otherwise, add to current chunk

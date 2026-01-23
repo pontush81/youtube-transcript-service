@@ -65,16 +65,19 @@ export async function saveTranscriptEmbeddings(params: SaveEmbeddingsParams): Pr
   await sql`DELETE FROM transcript_chunks WHERE video_id = ${normalizedVideoId}`;
   await sql`DELETE FROM transcript_chunks WHERE video_id LIKE ${normalizedVideoId + '%'}`;
 
-  // Insert new chunks with normalized video ID
-  for (let i = 0; i < chunks.length; i++) {
-    const chunk = chunks[i];
-    const embedding = embeddings[i];
-    const embeddingStr = `[${embedding.join(',')}]`;
-
-    await sql`
-      INSERT INTO transcript_chunks (blob_url, video_id, video_title, chunk_index, content, timestamp_start, embedding)
-      VALUES (${blobUrl}, ${normalizedVideoId}, ${videoTitle}, ${chunk.chunkIndex}, ${chunk.content}, ${chunk.timestampStart}, ${embeddingStr}::vector)
-    `;
+  // Batch insert chunks using Promise.all for parallelism (within same connection pool)
+  // This is faster than sequential inserts while maintaining parameterized query safety
+  if (chunks.length > 0) {
+    await Promise.all(
+      chunks.map((chunk, i) => {
+        const embedding = embeddings[i];
+        const embeddingStr = `[${embedding.join(',')}]`;
+        return sql`
+          INSERT INTO transcript_chunks (blob_url, video_id, video_title, chunk_index, content, timestamp_start, embedding)
+          VALUES (${blobUrl}, ${normalizedVideoId}, ${videoTitle}, ${chunk.chunkIndex}, ${chunk.content}, ${chunk.timestampStart}, ${embeddingStr}::vector)
+        `;
+      })
+    );
   }
 
   return {

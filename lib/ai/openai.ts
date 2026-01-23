@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { AIProvider, ChatParams, TranscriptChunk } from './types';
+import { embeddingCache } from './embedding-cache';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -66,18 +67,47 @@ export class OpenAIProvider implements AIProvider {
   }
 
   async embed(text: string): Promise<number[]> {
+    // Check cache first
+    const cached = embeddingCache.get(text);
+    if (cached) {
+      return cached;
+    }
+
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
       input: text,
     });
-    return response.data[0].embedding;
+    const embedding = response.data[0].embedding;
+
+    // Cache the result
+    embeddingCache.set(text, embedding);
+    return embedding;
   }
 
   async embedBatch(texts: string[]): Promise<number[][]> {
+    // Check which texts are cached
+    const { cached, uncached } = embeddingCache.getMany(texts);
+
+    // If all cached, return directly
+    if (uncached.length === 0) {
+      return texts.map((_, i) => cached.get(i)!);
+    }
+
+    // Fetch uncached embeddings
+    const uncachedTexts = uncached.map(i => texts[i]);
     const response = await openai.embeddings.create({
       model: 'text-embedding-3-small',
-      input: texts,
+      input: uncachedTexts,
     });
-    return response.data.map(d => d.embedding);
+
+    // Cache new embeddings
+    const newEmbeddings = response.data.map(d => d.embedding);
+    uncached.forEach((originalIndex, newIndex) => {
+      embeddingCache.set(texts[originalIndex], newEmbeddings[newIndex]);
+      cached.set(originalIndex, newEmbeddings[newIndex]);
+    });
+
+    // Return all embeddings in original order
+    return texts.map((_, i) => cached.get(i)!);
   }
 }

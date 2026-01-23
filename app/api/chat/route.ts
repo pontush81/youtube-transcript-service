@@ -2,9 +2,14 @@ import { NextRequest } from 'next/server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { searchTranscripts } from '@/lib/vector-search';
 import { Message } from '@/lib/ai/types';
+import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
+import { checkRateLimit, RATE_LIMITS, getClientIdentifier } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
+
+// Limit conversation history to prevent token overflow
+const MAX_HISTORY_MESSAGES = 10;
 
 interface ChatRequest {
   message: string;
@@ -14,9 +19,30 @@ interface ChatRequest {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimit = checkRateLimit(`chat:${clientId}`, RATE_LIMITS.chat);
+
+  if (!rateLimit.allowed) {
+    return new Response(
+      JSON.stringify({
+        error: 'För många förfrågningar. Vänta en stund.',
+        retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+      }),
+      {
+        status: 429,
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RateLimit-Remaining': '0',
+          'X-RateLimit-Reset': String(rateLimit.resetAt),
+        },
+      }
+    );
+  }
+
   try {
     const body: ChatRequest = await request.json();
-    const { message, conversationHistory, selectedVideos, mode } = body;
+    const { message, conversationHistory: rawHistory, selectedVideos, mode } = body;
 
     if (!message?.trim()) {
       return new Response(
@@ -25,9 +51,23 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    // Limit conversation history to last N messages
+    const conversationHistory = rawHistory.slice(-MAX_HISTORY_MESSAGES);
+
+    // Handle empty selection edge case
+    if (Array.isArray(selectedVideos) && selectedVideos.length === 0) {
+      return new Response(
+        JSON.stringify({ error: 'Välj minst en video' }),
+        { status: 400, headers: { 'Content-Type': 'application/json' } }
+      );
+    }
+
+    // Rewrite query with conversation context for better search
+    const searchQuery = await rewriteQueryWithContext(message, conversationHistory);
+
     // Search for relevant transcript chunks
     const relevantChunks = await searchTranscripts({
-      query: message,
+      query: searchQuery,
       videoIds: selectedVideos,
     });
 
