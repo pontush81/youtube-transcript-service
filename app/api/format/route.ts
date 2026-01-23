@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
 import { formatRequestSchema, parseRequest } from '@/lib/validations';
+import { auth } from '@clerk/nextjs/server';
 
 // Vercel free tier har 10s timeout
 export const maxDuration = 10;
@@ -37,6 +38,12 @@ function simpleFormat(text: string): string {
 }
 
 export async function POST(request: NextRequest) {
+  // Require authentication
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     const rawBody = await request.json();
     const parsed = parseRequest(formatRequestSchema, rawBody);
