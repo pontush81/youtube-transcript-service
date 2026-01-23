@@ -5,6 +5,8 @@ import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
+import { auth } from '@/lib/auth';
+import { sql } from '@/lib/db';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
 // export const runtime = 'edge';
@@ -106,6 +108,23 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Log but don't fail - embeddings are optional
       console.error('Failed to create embeddings:', error);
+    }
+
+    // Link transcript to user if logged in
+    const session = await auth();
+    if (session?.user?.id) {
+      try {
+        await sql`
+          INSERT INTO user_transcripts (user_id, video_id, blob_url, is_public)
+          VALUES (${session.user.id}, ${videoId}, ${downloadUrl}, true)
+          ON CONFLICT (user_id, video_id) DO UPDATE SET
+            blob_url = EXCLUDED.blob_url,
+            is_public = EXCLUDED.is_public
+        `;
+      } catch (error) {
+        // Log but don't fail - linking is optional
+        console.error('Failed to link transcript to user:', error);
+      }
     }
 
     return NextResponse.json({

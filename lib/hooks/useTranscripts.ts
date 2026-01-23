@@ -2,16 +2,20 @@
 
 import useSWR from 'swr';
 
-interface TranscriptItem {
+export interface TranscriptItem {
   videoId: string;
   title: string;
   url: string;
   uploadedAt: string;
   size: number;
+  indexed?: boolean;
+  isOwner?: boolean;
 }
 
 interface TranscriptsResponse {
   transcripts: TranscriptItem[];
+  isAuthenticated: boolean;
+  userTranscriptCount: number;
 }
 
 const fetcher = async (url: string): Promise<TranscriptsResponse> => {
@@ -22,9 +26,10 @@ const fetcher = async (url: string): Promise<TranscriptsResponse> => {
   return response.json();
 };
 
-export function useTranscripts() {
+export function useTranscripts(myOnly = false) {
+  const url = myOnly ? '/api/transcripts?my=true' : '/api/transcripts';
   const { data, error, isLoading, mutate } = useSWR<TranscriptsResponse>(
-    '/api/transcripts',
+    url,
     fetcher,
     {
       revalidateOnFocus: false,
@@ -35,6 +40,8 @@ export function useTranscripts() {
 
   return {
     transcripts: data?.transcripts ?? [],
+    isAuthenticated: data?.isAuthenticated ?? false,
+    userTranscriptCount: data?.userTranscriptCount ?? 0,
     isLoading,
     isError: error,
     error: error?.message,

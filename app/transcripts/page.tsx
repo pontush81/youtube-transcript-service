@@ -6,7 +6,8 @@ import { TranscriptListSkeleton } from '@/components/Skeleton';
 import { useTranscripts } from '@/lib/hooks/useTranscripts';
 
 export default function TranscriptsPage() {
-  const { transcripts, isLoading: loading, error } = useTranscripts();
+  const [showMyOnly, setShowMyOnly] = useState(false);
+  const { transcripts, isLoading: loading, error, isAuthenticated, userTranscriptCount } = useTranscripts(showMyOnly);
   const [searchQuery, setSearchQuery] = useState('');
 
   const formatDate = (dateString: string) => {
@@ -52,6 +53,37 @@ export default function TranscriptsPage() {
             <span className="hidden sm:inline">Chatta</span>
           </Link>
         </div>
+
+        {/* Filter tabs for authenticated users */}
+        {!loading && isAuthenticated && userTranscriptCount > 0 && (
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setShowMyOnly(false)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                !showMyOnly
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Alla transkript
+            </button>
+            <button
+              onClick={() => setShowMyOnly(true)}
+              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                showMyOnly
+                  ? 'bg-blue-100 text-blue-700'
+                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+              }`}
+            >
+              Mina transkript
+              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                showMyOnly ? 'bg-blue-200' : 'bg-gray-200'
+              }`}>
+                {userTranscriptCount}
+              </span>
+            </button>
+          </div>
+        )}
 
         {/* Search input */}
         {!loading && transcripts.length > 0 && (
@@ -140,9 +172,16 @@ export default function TranscriptsPage() {
                       </svg>
                     </div>
                     <div className="min-w-0 flex-1">
-                      <p className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2 sm:truncate">
-                        {transcript.title}
-                      </p>
+                      <div className="flex items-center gap-2">
+                        <p className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2 sm:truncate">
+                          {transcript.title}
+                        </p>
+                        {transcript.isOwner && (
+                          <span className="flex-shrink-0 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full hidden sm:inline">
+                            Din
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 mt-0.5">
                         <span>{formatDate(transcript.uploadedAt)}</span>
                         <span className="text-gray-300">·</span>

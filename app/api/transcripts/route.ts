@@ -1,7 +1,8 @@
 import { list } from '@vercel/blob';
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
 import { sql } from '@/lib/db';
+import { auth } from '@/lib/auth';
 
 // Remove edge runtime - need nodejs for database access
 // export const runtime = 'edge';
@@ -13,6 +14,7 @@ export interface TranscriptItem {
   uploadedAt: Date;
   size: number;
   indexed: boolean;
+  isOwner?: boolean;
 }
 
 // Extract title from Markdown content (first line is always "# {title}")
@@ -24,8 +26,24 @@ function extractTitleFromMarkdown(content: string): string | null {
   return null;
 }
 
-export async function GET() {
+export async function GET(request: NextRequest) {
   try {
+    // Check if user is logged in
+    const session = await auth();
+    const userId = session?.user?.id;
+
+    // Get user's transcripts if logged in
+    const userTranscriptIds = new Set<string>();
+    if (userId) {
+      const userTranscripts = await sql`
+        SELECT video_id FROM user_transcripts WHERE user_id = ${userId}
+      `;
+      userTranscripts.rows.forEach(r => userTranscriptIds.add(r.video_id));
+    }
+
+    // Check for "my" filter
+    const showMyOnly = request.nextUrl.searchParams.get('my') === 'true';
+
     // Get cached titles from database (fast)
     const cachedTitles = await sql`
       SELECT DISTINCT ON (video_id) video_id, video_title, blob_url
@@ -61,8 +79,10 @@ export async function GET() {
     }
 
     // Build transcripts list - use cached titles when available
-    const transcripts: TranscriptItem[] = await Promise.all(
+    const allTranscripts: TranscriptItem[] = await Promise.all(
       Array.from(videoMap.values()).map(async ({ blob, normalizedId }) => {
+        const isOwner = userTranscriptIds.has(normalizedId);
+
         // Try to get title from cache first (fast path)
         const cached = titleCache.get(normalizedId);
         if (cached) {
@@ -73,6 +93,7 @@ export async function GET() {
             uploadedAt: blob.uploadedAt,
             size: blob.size,
             indexed: true,
+            isOwner,
           };
         }
 
@@ -98,9 +119,15 @@ export async function GET() {
           uploadedAt: blob.uploadedAt,
           size: blob.size,
           indexed: false,
+          isOwner,
         };
       })
     );
+
+    // Filter to user's transcripts if requested
+    const transcripts = showMyOnly
+      ? allTranscripts.filter(t => t.isOwner)
+      : allTranscripts;
 
     // Sort by upload date (newest first)
     transcripts.sort((a, b) =>
@@ -108,10 +135,17 @@ export async function GET() {
     );
 
     return NextResponse.json(
-      { transcripts },
+      {
+        transcripts,
+        isAuthenticated: !!userId,
+        userTranscriptCount: userTranscriptIds.size,
+      },
       {
         headers: {
-          'Cache-Control': 'public, s-maxage=60, stale-while-revalidate=300',
+          // Don't cache when authenticated (personalized content)
+          'Cache-Control': userId
+            ? 'private, no-cache'
+            : 'public, s-maxage=60, stale-while-revalidate=300',
         },
       }
     );

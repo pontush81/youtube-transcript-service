@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Analytics } from "@vercel/analytics/react";
+import { Providers } from "@/components/Providers";
 import { NavHeader } from "@/components/NavHeader";
 import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
@@ -17,13 +18,15 @@ export default function RootLayout({
   return (
     <html lang="sv">
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
-        <ToastProvider>
-          <NavHeader />
-          <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
-            {children}
-          </div>
-          <Analytics />
-        </ToastProvider>
+        <Providers>
+          <ToastProvider>
+            <NavHeader />
+            <div className="min-h-[calc(100vh-3.5rem)] sm:min-h-[calc(100vh-4rem)]">
+              {children}
+            </div>
+            <Analytics />
+          </ToastProvider>
+        </Providers>
       </body>
     </html>
   );

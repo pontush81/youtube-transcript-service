@@ -1,11 +1,8 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function middleware(request: NextRequest) {
-  // Get response
-  const response = NextResponse.next();
-
-  // Security headers
+// Security headers middleware
+function addSecurityHeaders(response: NextResponse) {
   const headers = response.headers;
 
   // Prevent clickjacking
@@ -43,10 +40,10 @@ export function middleware(request: NextRequest) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai",
-    "frame-src 'self' https://www.youtube.com",
+    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://accounts.google.com",
+    "frame-src 'self' https://www.youtube.com https://accounts.google.com",
     "frame-ancestors 'none'",
-    "form-action 'self'",
+    "form-action 'self' https://accounts.google.com https://github.com",
     "base-uri 'self'",
     "object-src 'none'",
   ].join('; ');
@@ -56,7 +53,38 @@ export function middleware(request: NextRequest) {
   return response;
 }
 
-// Apply middleware to all routes except static files and API routes that need different handling
+// Routes that require authentication
+const protectedRoutes = ['/chat'];
+
+// Routes that should redirect to home if already authenticated
+const authRoutes = ['/login'];
+
+export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl;
+
+  // Check if user is authenticated via session cookie
+  const sessionCookie = request.cookies.get('authjs.session-token') ||
+                        request.cookies.get('__Secure-authjs.session-token');
+  const isAuthenticated = !!sessionCookie;
+
+  // Redirect authenticated users away from auth routes
+  if (isAuthenticated && authRoutes.some(route => pathname.startsWith(route))) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+
+  // Redirect unauthenticated users to login for protected routes
+  if (!isAuthenticated && protectedRoutes.some(route => pathname.startsWith(route))) {
+    const loginUrl = new URL('/login', request.url);
+    loginUrl.searchParams.set('callbackUrl', pathname);
+    return NextResponse.redirect(loginUrl);
+  }
+
+  // Add security headers to response
+  const response = NextResponse.next();
+  return addSecurityHeaders(response);
+}
+
+// Apply middleware to all routes except static files
 export const config = {
   matcher: [
     /*
@@ -65,7 +93,8 @@ export const config = {
      * - _next/image (image optimization files)
      * - favicon.ico (favicon file)
      * - public folder
+     * - api/auth (NextAuth routes need to handle their own auth)
      */
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
+    '/((?!_next/static|_next/image|favicon.ico|api/auth|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
   ],
 };

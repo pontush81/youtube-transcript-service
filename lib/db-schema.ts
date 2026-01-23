@@ -15,6 +15,95 @@ export async function setupDatabase() {
   // Enable pgvector extension
   await sql`CREATE EXTENSION IF NOT EXISTS vector`;
 
+  // ==========================================
+  // NextAuth.js tables
+  // ==========================================
+
+  // Users table
+  await sql`
+    CREATE TABLE IF NOT EXISTS users (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      name TEXT,
+      email TEXT UNIQUE,
+      email_verified TIMESTAMPTZ,
+      image TEXT,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+
+  // Accounts table (OAuth providers)
+  await sql`
+    CREATE TABLE IF NOT EXISTS accounts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      type TEXT NOT NULL,
+      provider TEXT NOT NULL,
+      provider_account_id TEXT NOT NULL,
+      refresh_token TEXT,
+      access_token TEXT,
+      expires_at BIGINT,
+      token_type TEXT,
+      scope TEXT,
+      id_token TEXT,
+      session_state TEXT,
+      UNIQUE(provider, provider_account_id)
+    )
+  `;
+
+  // Sessions table
+  await sql`
+    CREATE TABLE IF NOT EXISTS sessions (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      session_token TEXT UNIQUE NOT NULL,
+      user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+      expires TIMESTAMPTZ NOT NULL
+    )
+  `;
+
+  // Verification tokens (for email sign-in)
+  await sql`
+    CREATE TABLE IF NOT EXISTS verification_tokens (
+      identifier TEXT NOT NULL,
+      token TEXT NOT NULL,
+      expires TIMESTAMPTZ NOT NULL,
+      PRIMARY KEY(identifier, token)
+    )
+  `;
+
+  // ==========================================
+  // User transcripts ownership
+  // ==========================================
+
+  // User transcripts table (links users to their transcripts)
+  await sql`
+    CREATE TABLE IF NOT EXISTS user_transcripts (
+      id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+      user_id UUID REFERENCES users(id) ON DELETE CASCADE,
+      video_id TEXT NOT NULL,
+      blob_url TEXT NOT NULL,
+      is_public BOOLEAN DEFAULT false,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      UNIQUE(user_id, video_id)
+    )
+  `;
+
+  // Index for user lookups
+  await sql`
+    CREATE INDEX IF NOT EXISTS user_transcripts_user_id_idx
+    ON user_transcripts (user_id)
+  `;
+
+  // Index for public transcripts
+  await sql`
+    CREATE INDEX IF NOT EXISTS user_transcripts_public_idx
+    ON user_transcripts (is_public) WHERE is_public = true
+  `;
+
+  // ==========================================
+  // Transcript chunks table
+  // ==========================================
+
   // Create transcript_chunks table
   await sql`
     CREATE TABLE IF NOT EXISTS transcript_chunks (
