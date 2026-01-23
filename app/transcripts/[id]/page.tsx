@@ -195,7 +195,8 @@ export default function TranscriptViewPage() {
           </div>
         ) : (
           <>
-            <div className="mb-6 flex items-center justify-between">
+            <div className="mb-6 space-y-3">
+              {/* Back link */}
               <Link
                 href="/transcripts"
                 className="inline-flex items-center gap-2 text-gray-600 hover:text-gray-900"
@@ -214,64 +215,58 @@ export default function TranscriptViewPage() {
                 </svg>
                 Tillbaka
               </Link>
-              <div className="flex items-center gap-2">
+              {/* Action buttons - wrap on mobile */}
+              <div className="flex flex-wrap items-center gap-2">
                 {!isFormatted && (
                   <button
                     onClick={handleFormat}
                     disabled={formatting}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Formatera"
                   >
                     {formatting ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                        Formaterar...
-                      </>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                     ) : (
-                      <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
-                        </svg>
-                        Formatera
-                      </>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
+                      </svg>
                     )}
+                    <span className="hidden sm:inline">{formatting ? 'Formaterar...' : 'Formatera'}</span>
                   </button>
                 )}
                 {!hasSummary && (
                   <button
                     onClick={handleSummarize}
                     disabled={summarizing}
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                    title="Sammanfatta"
                   >
                     {summarizing ? (
-                      <>
-                        <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
-                        Sammanfattar...
-                      </>
+                      <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
                     ) : (
-                      <>
-                        <svg
-                          xmlns="http://www.w3.org/2000/svg"
-                          className="h-4 w-4"
-                          viewBox="0 0 20 20"
-                          fill="currentColor"
-                        >
-                          <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
-                        </svg>
-                        Sammanfatta
-                      </>
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        className="h-4 w-4"
+                        viewBox="0 0 20 20"
+                        fill="currentColor"
+                      >
+                        <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
+                      </svg>
                     )}
+                    <span className="hidden sm:inline">{summarizing ? 'Sammanfattar...' : 'Sammanfatta'}</span>
                   </button>
                 )}
                 {blobUrl && (
                   <a
                     href={blobUrl}
                     download
-                    className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
+                    title="Ladda ner"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -285,12 +280,13 @@ export default function TranscriptViewPage() {
                         clipRule="evenodd"
                       />
                     </svg>
-                    Ladda ner
+                    <span className="hidden sm:inline">Ladda ner</span>
                   </a>
                 )}
                 <button
                   onClick={() => setShowDeleteModal(true)}
-                  className="inline-flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
+                  title="Radera"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -304,7 +300,7 @@ export default function TranscriptViewPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  Radera
+                  <span className="hidden sm:inline">Radera</span>
                 </button>
               </div>
             </div>
