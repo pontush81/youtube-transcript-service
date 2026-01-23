@@ -1,8 +1,13 @@
 import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
-const isProtectedRoute = createRouteMatcher(['/chat(.*)']);
-const isAuthRoute = createRouteMatcher(['/login(.*)', '/sign-in(.*)', '/sign-up(.*)']);
+// Routes that DON'T require authentication
+const isPublicRoute = createRouteMatcher([
+  '/sign-in(.*)',
+  '/sign-up(.*)',
+  '/api/webhooks/(.*)',  // Clerk webhooks
+  '/api/webhook(.*)',    // Zapier webhook (uses API key)
+]);
 
 // Security headers
 function addSecurityHeaders(response: NextResponse) {
@@ -58,13 +63,14 @@ function addSecurityHeaders(response: NextResponse) {
 export default clerkMiddleware(async (auth, req) => {
   const { userId } = await auth();
 
-  // Redirect authenticated users away from auth routes (except sign-in/sign-up which Clerk handles)
-  if (isAuthRoute(req) && userId && req.nextUrl.pathname.startsWith('/login')) {
-    return NextResponse.redirect(new URL('/', req.url));
+  // Allow public routes without authentication
+  if (isPublicRoute(req)) {
+    const response = NextResponse.next();
+    return addSecurityHeaders(response);
   }
 
-  // Protect /chat route
-  if (isProtectedRoute(req) && !userId) {
+  // Protect ALL other routes - redirect to sign-in if not authenticated
+  if (!userId) {
     return NextResponse.redirect(new URL('/sign-in', req.url));
   }
 
