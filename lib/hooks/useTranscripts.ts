@@ -18,6 +18,8 @@ export interface TranscriptItem {
   publishedAt?: string;
   viewCount?: number;
   tags?: string[];
+  categoryId?: number;
+  categoryName?: string;
 }
 
 export interface Channel {
@@ -26,9 +28,16 @@ export interface Channel {
   videoCount: number;
 }
 
+export interface Category {
+  categoryId: number;
+  categoryName: string;
+  videoCount: number;
+}
+
 interface TranscriptsResponse {
   transcripts: TranscriptItem[];
   channels: Channel[];
+  categories: Category[];
   isAuthenticated: boolean;
   userTranscriptCount: number;
 }
@@ -36,6 +45,7 @@ interface TranscriptsResponse {
 interface UseTranscriptsOptions {
   myOnly?: boolean;
   channelId?: string;
+  categoryId?: string;
   sortBy?: 'uploadedAt' | 'duration' | 'views' | 'published' | 'title';
 }
 
@@ -50,12 +60,13 @@ const fetcher = async (url: string): Promise<TranscriptsResponse> => {
 export function useTranscripts(options: UseTranscriptsOptions | boolean = {}) {
   // Support legacy boolean parameter for myOnly
   const opts = typeof options === 'boolean' ? { myOnly: options } : options;
-  const { myOnly = false, channelId, sortBy } = opts;
+  const { myOnly = false, channelId, categoryId, sortBy } = opts;
 
   // Build URL with query params
   const params = new URLSearchParams();
   if (myOnly) params.set('my', 'true');
   if (channelId) params.set('channel', channelId);
+  if (categoryId) params.set('category', categoryId);
   if (sortBy) params.set('sort', sortBy);
 
   const queryString = params.toString();
@@ -74,6 +85,7 @@ export function useTranscripts(options: UseTranscriptsOptions | boolean = {}) {
   return {
     transcripts: data?.transcripts ?? [],
     channels: data?.channels ?? [],
+    categories: data?.categories ?? [],
     isAuthenticated: data?.isAuthenticated ?? false,
     userTranscriptCount: data?.userTranscriptCount ?? 0,
     isLoading,

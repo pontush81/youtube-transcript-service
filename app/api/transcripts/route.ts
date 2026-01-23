@@ -23,11 +23,19 @@ export interface TranscriptItem {
   publishedAt?: string;
   viewCount?: number;
   tags?: string[];
+  categoryId?: number;
+  categoryName?: string;
 }
 
 export interface Channel {
   channelId: string;
   channelName: string;
+  videoCount: number;
+}
+
+export interface Category {
+  categoryId: number;
+  categoryName: string;
   videoCount: number;
 }
 
@@ -57,6 +65,7 @@ export async function GET(request: NextRequest) {
     // Check for filters
     const showMyOnly = request.nextUrl.searchParams.get('my') === 'true';
     const channelFilter = request.nextUrl.searchParams.get('channel');
+    const categoryFilter = request.nextUrl.searchParams.get('category');
     const sortBy = request.nextUrl.searchParams.get('sort') || 'uploadedAt';
 
     // Get cached titles from database (fast)
@@ -144,6 +153,8 @@ export async function GET(request: NextRequest) {
           publishedAt: metadata?.published_at || undefined,
           viewCount: metadata?.view_count || undefined,
           tags: metadata?.tags || undefined,
+          categoryId: metadata?.category_id || undefined,
+          categoryName: metadata?.category_name || undefined,
         };
       })
     );
@@ -157,6 +168,11 @@ export async function GET(request: NextRequest) {
 
     if (channelFilter) {
       transcripts = transcripts.filter(t => t.channelId === channelFilter);
+    }
+
+    if (categoryFilter) {
+      const catId = parseInt(categoryFilter, 10);
+      transcripts = transcripts.filter(t => t.categoryId === catId);
     }
 
     // Sort
@@ -205,10 +221,32 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.videoCount - a.videoCount);
 
+    // Get unique categories for filter dropdown
+    const categoryMap = new Map<number, { name: string; count: number }>();
+    for (const t of allTranscripts) {
+      if (t.categoryId && t.categoryName) {
+        const existing = categoryMap.get(t.categoryId);
+        if (existing) {
+          existing.count++;
+        } else {
+          categoryMap.set(t.categoryId, { name: t.categoryName, count: 1 });
+        }
+      }
+    }
+
+    const categories: Category[] = Array.from(categoryMap.entries())
+      .map(([id, data]) => ({
+        categoryId: id,
+        categoryName: data.name,
+        videoCount: data.count,
+      }))
+      .sort((a, b) => b.videoCount - a.videoCount);
+
     return NextResponse.json(
       {
         transcripts,
         channels,
+        categories,
         isAuthenticated: !!userId,
         userTranscriptCount: userTranscriptIds.size,
       },

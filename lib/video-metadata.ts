@@ -16,8 +16,8 @@ export async function saveVideoMetadata(
     INSERT INTO video_metadata (
       video_id, title, description, duration_seconds,
       channel_id, channel_name, thumbnail_url, published_at,
-      view_count, like_count, tags, transcript_language,
-      fetched_at, updated_at
+      view_count, like_count, tags, category_id, category_name,
+      transcript_language, fetched_at, updated_at
     ) VALUES (
       ${metadata.videoId},
       ${metadata.title},
@@ -30,6 +30,8 @@ export async function saveVideoMetadata(
       ${metadata.viewCount},
       ${metadata.likeCount},
       ${tagsArray}::text[],
+      ${metadata.categoryId},
+      ${metadata.categoryName},
       ${metadata.transcriptLanguage || null},
       NOW(),
       NOW()
@@ -45,6 +47,8 @@ export async function saveVideoMetadata(
       view_count = EXCLUDED.view_count,
       like_count = EXCLUDED.like_count,
       tags = EXCLUDED.tags,
+      category_id = COALESCE(EXCLUDED.category_id, video_metadata.category_id),
+      category_name = COALESCE(EXCLUDED.category_name, video_metadata.category_name),
       transcript_language = COALESCE(EXCLUDED.transcript_language, video_metadata.transcript_language),
       updated_at = NOW()
   `;
@@ -75,6 +79,8 @@ export async function getVideoMetadata(videoId: string): Promise<VideoMetadata |
     viewCount: row.view_count,
     likeCount: row.like_count,
     tags: row.tags || [],
+    categoryId: row.category_id,
+    categoryName: row.category_name,
     transcriptLanguage: row.transcript_language,
   };
 }
@@ -99,6 +105,8 @@ export async function getAllVideoMetadata(): Promise<Map<string, VideoMetadata>>
       viewCount: row.view_count,
       likeCount: row.like_count,
       tags: row.tags || [],
+      categoryId: row.category_id,
+      categoryName: row.category_name,
       transcriptLanguage: row.transcript_language,
     });
   }
@@ -121,6 +129,25 @@ export async function getChannels(): Promise<Array<{ channelId: string; channelN
   return result.rows.map(row => ({
     channelId: row.channel_id,
     channelName: row.channel_name,
+    videoCount: parseInt(row.video_count, 10),
+  }));
+}
+
+/**
+ * Get unique categories from metadata
+ */
+export async function getCategories(): Promise<Array<{ categoryId: number; categoryName: string; videoCount: number }>> {
+  const result = await sql`
+    SELECT category_id, category_name, COUNT(*) as video_count
+    FROM video_metadata
+    WHERE category_id IS NOT NULL
+    GROUP BY category_id, category_name
+    ORDER BY video_count DESC
+  `;
+
+  return result.rows.map(row => ({
+    categoryId: row.category_id,
+    categoryName: row.category_name,
     videoCount: parseInt(row.video_count, 10),
   }));
 }
@@ -153,6 +180,8 @@ export async function fetchAndSaveVideoMetadata(
       viewCount: null,
       likeCount: null,
       tags: [],
+      categoryId: null,
+      categoryName: null,
     };
   }
 

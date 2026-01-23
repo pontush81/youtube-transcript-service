@@ -3,25 +3,27 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { TranscriptListSkeleton } from '@/components/Skeleton';
-import { useTranscripts, TranscriptItem, Channel, formatDuration, formatViewCount } from '@/lib/hooks/useTranscripts';
+import { useTranscripts, TranscriptItem, Channel, Category, formatDuration, formatViewCount } from '@/lib/hooks/useTranscripts';
 
 type SortOption = 'uploadedAt' | 'duration' | 'views' | 'published' | 'title';
 
 export default function TranscriptsPage() {
   const [showMyOnly, setShowMyOnly] = useState(false);
   const [channelFilter, setChannelFilter] = useState<string | undefined>();
+  const [categoryFilter, setCategoryFilter] = useState<string | undefined>();
   const [sortBy, setSortBy] = useState<SortOption>('uploadedAt');
   const [searchQuery, setSearchQuery] = useState('');
 
   const {
     transcripts,
     channels,
+    categories,
     isLoading: loading,
     error,
     isAuthenticated,
     userTranscriptCount,
     mutate
-  } = useTranscripts({ myOnly: showMyOnly, channelId: channelFilter, sortBy });
+  } = useTranscripts({ myOnly: showMyOnly, channelId: channelFilter, categoryId: categoryFilter, sortBy });
 
   // Selection and delete state
   const [editMode, setEditMode] = useState(false);
@@ -43,7 +45,8 @@ export default function TranscriptsPage() {
   // Filter transcripts by search query
   const filteredTranscripts = transcripts.filter((transcript) =>
     transcript.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-    transcript.channelName?.toLowerCase().includes(searchQuery.toLowerCase())
+    transcript.channelName?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transcript.categoryName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
 
   const toggleSelection = (videoId: string) => {
@@ -154,7 +157,7 @@ export default function TranscriptsPage() {
               Sparade transkript
             </h1>
             <p className="text-gray-600 text-sm hidden sm:block">
-              {transcripts.length} transkript från {channels.length} kanaler
+              {transcripts.length} transkript från {channels.length} kanaler i {categories.length} kategorier
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -278,6 +281,22 @@ export default function TranscriptsPage() {
                   {channels.map((channel) => (
                     <option key={channel.channelId} value={channel.channelId}>
                       {channel.channelName} ({channel.videoCount})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Category filter */}
+              {categories.length > 1 && (
+                <select
+                  value={categoryFilter || ''}
+                  onChange={(e) => setCategoryFilter(e.target.value || undefined)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Alla kategorier</option>
+                  {categories.map((category) => (
+                    <option key={category.categoryId} value={category.categoryId.toString()}>
+                      {category.categoryName} ({category.videoCount})
                     </option>
                   ))}
                 </select>
