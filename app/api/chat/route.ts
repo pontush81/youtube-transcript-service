@@ -1,4 +1,5 @@
 import { NextRequest } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import { getAIProvider } from '@/lib/ai/provider';
 import { searchTranscripts } from '@/lib/vector-search';
 import { Message } from '@/lib/ai/types';
@@ -13,6 +14,14 @@ export const maxDuration = 30;
 const MAX_HISTORY_MESSAGES = 10;
 
 export async function POST(request: NextRequest) {
+  // Auth check
+  const { userId } = await auth();
+  if (!userId) {
+    return new Response(
+      JSON.stringify({ error: 'Unauthorized' }),
+      { status: 401, headers: { 'Content-Type': 'application/json' } }
+    );
+  }
   // Rate limiting
   const clientId = getClientIdentifier(request);
   const rateLimit = await checkRateLimit('chat', clientId);
