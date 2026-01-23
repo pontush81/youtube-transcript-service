@@ -1,11 +1,31 @@
-import { NextResponse } from 'next/server';
+import { NextRequest, NextResponse } from 'next/server';
+import { timingSafeEqual } from 'crypto';
 import { list } from '@vercel/blob';
 import { sql } from '@/lib/db';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
 import { optimizeVectorIndex } from '@/lib/db-schema';
 
-export async function POST(request: Request) {
+function secureCompare(a: string, b: string): boolean {
+  if (typeof a !== 'string' || typeof b !== 'string') return false;
+  const aBuffer = Buffer.from(a);
+  const bBuffer = Buffer.from(b);
+  if (aBuffer.length !== bBuffer.length) {
+    timingSafeEqual(aBuffer, aBuffer);
+    return false;
+  }
+  return timingSafeEqual(aBuffer, bBuffer);
+}
+
+export async function POST(request: NextRequest) {
+  // Admin key required for this sensitive operation
+  const adminKey = request.headers.get('x-admin-key');
+  const validKey = process.env.ADMIN_KEY;
+
+  if (!adminKey || !validKey || !secureCompare(adminKey, validKey)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   try {
     // Check for clean parameter to wipe and rebuild
     const { searchParams } = new URL(request.url);
