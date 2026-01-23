@@ -44,6 +44,14 @@ https://github.com/pontush81/youtube-transcript-service
 - `OPENAI_API_KEY` - För AI-formatering av transkript
 - `ADMIN_KEY` - För admin API-åtkomst utan Clerk
 
+### Stripe (för credits)
+- `STRIPE_SECRET_KEY` - Stripe API secret key
+- `STRIPE_WEBHOOK_SECRET` - Webhook signing secret
+- `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` - Stripe publishable key
+- `STRIPE_PRICE_STARTER` - Price ID för 100 credits (49 kr)
+- `STRIPE_PRICE_PRO` - Price ID för 500 credits (149 kr)
+- `STRIPE_PRICE_MEGA` - Price ID för 2000 credits (449 kr)
+
 ## Funktionalitet utan API-nycklar
 Kärn-funktionalitet fungerar helt utan externa API-nycklar:
 - ✅ Hämta transkript (youtube-transcript)
