@@ -1,0 +1,152 @@
+/**
+ * Supadata.ai API Client
+ * Fetches YouTube transcripts reliably via Supadata's infrastructure
+ */
+
+const SUPADATA_API_URL = 'https://api.supadata.ai/v1';
+
+export interface TranscriptSegment {
+  text: string;
+  offset: number;
+  duration: number;
+  lang: string;
+}
+
+export interface TranscriptResponse {
+  content: string | TranscriptSegment[];
+  lang: string;
+  availableLangs: string[];
+}
+
+export interface TranscriptResult {
+  transcript: string;
+  language: string;
+  segments: TranscriptSegment[];
+}
+
+/**
+ * Fetch transcript from YouTube via Supadata.ai
+ */
+export async function fetchTranscript(
+  videoId: string,
+  preferredLang?: string
+): Promise<TranscriptResult> {
+  const apiKey = process.env.SUPADATA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('SUPADATA_API_KEY is not configured');
+  }
+
+  const params = new URLSearchParams({
+    videoId,
+    text: 'false', // Get timestamped segments
+  });
+
+  if (preferredLang) {
+    params.set('lang', preferredLang);
+  }
+
+  const response = await fetch(
+    `${SUPADATA_API_URL}/youtube/transcript?${params}`,
+    {
+      headers: {
+        'x-api-key': apiKey,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    const error = await response.text();
+
+    if (response.status === 404) {
+      throw new Error('Inget transkript tillgängligt för denna video');
+    }
+    if (response.status === 401) {
+      throw new Error('Supadata API-nyckel är ogiltig');
+    }
+    if (response.status === 429) {
+      throw new Error('För många förfrågningar till Supadata. Försök igen senare.');
+    }
+
+    throw new Error(`Supadata error: ${response.status} - ${error}`);
+  }
+
+  const data: TranscriptResponse = await response.json();
+
+  // Handle both text and segment responses
+  let segments: TranscriptSegment[];
+  let transcript: string;
+
+  if (typeof data.content === 'string') {
+    // Plain text response
+    transcript = data.content;
+    segments = [];
+  } else {
+    // Timestamped segments
+    segments = data.content;
+    transcript = segments.map(s => s.text).join(' ');
+  }
+
+  if (!transcript || transcript.trim().length === 0) {
+    throw new Error('Transkriptet var tomt');
+  }
+
+  console.log(
+    `Supadata: Transcript fetched in ${data.lang}, ${transcript.length} chars, ${segments.length} segments`
+  );
+
+  return {
+    transcript,
+    language: data.lang,
+    segments,
+  };
+}
+
+/**
+ * Check if a video has available transcripts via Supadata
+ */
+export async function hasTranscript(videoId: string): Promise<boolean> {
+  try {
+    const apiKey = process.env.SUPADATA_API_KEY;
+    if (!apiKey) return false;
+
+    const response = await fetch(
+      `${SUPADATA_API_URL}/youtube/transcript?videoId=${videoId}&text=true`,
+      {
+        headers: {
+          'x-api-key': apiKey,
+        },
+      }
+    );
+
+    return response.ok;
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Get available transcript languages for a video
+ */
+export async function getAvailableLanguages(videoId: string): Promise<string[]> {
+  try {
+    const apiKey = process.env.SUPADATA_API_KEY;
+    if (!apiKey) return [];
+
+    const response = await fetch(
+      `${SUPADATA_API_URL}/youtube/transcript?videoId=${videoId}&text=true`,
+      {
+        headers: {
+          'x-api-key': apiKey,
+        },
+      }
+    );
+
+    if (!response.ok) return [];
+
+    const data: TranscriptResponse = await response.json();
+    return data.availableLangs || [];
+  } catch {
+    return [];
+  }
+}

@@ -1,12 +1,12 @@
 /**
- * YouTube utilities - No external API dependencies for core functionality
+ * YouTube utilities
  *
- * Transcripts: Uses youtube-transcript package (free, no API key)
+ * Transcripts: Uses Supadata.ai (reliable, paid)
  * Metadata: Uses YouTube oEmbed (free) + YouTube Data API v3 (optional, for rich data)
  * Playlists: Requires YOUTUBE_API_KEY
  */
 
-import { fetchTranscript as fetchTranscriptService } from './transcript-service';
+import { fetchTranscript as fetchTranscriptSupadata } from './supadata';
 import {
   fetchVideoMetadata as fetchMetadataService,
   fetchVideoTitle as fetchTitleService,
@@ -123,13 +123,13 @@ export interface VideoMetadata {
 
 /**
  * Fetch transcript from YouTube video
- * Uses youtube-transcript package - no API key required
+ * Uses Supadata.ai for reliable transcript fetching
  */
 export async function fetchTranscript(
   videoId: string,
   preferredLang?: string
 ): Promise<string> {
-  const result = await fetchTranscriptService(videoId, preferredLang);
+  const result = await fetchTranscriptSupadata(videoId, preferredLang);
   return result.transcript;
 }
 
