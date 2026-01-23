@@ -1,9 +1,17 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
+import { auth } from '@clerk/nextjs/server';
+import { isValidBlobUrl } from '@/lib/validations';
 
 export const maxDuration = 60;
 
 export async function POST(request: NextRequest) {
+  // Require authentication
+  const { userId } = await auth();
+  if (!userId) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
 
   if (!apiKey) {
@@ -19,6 +27,14 @@ export async function POST(request: NextRequest) {
     if (!blobUrl) {
       return NextResponse.json(
         { success: false, error: 'Blob URL krävs' },
+        { status: 400 }
+      );
+    }
+
+    // SSRF protection: validate blob URL
+    if (!isValidBlobUrl(blobUrl)) {
+      return NextResponse.json(
+        { success: false, error: 'Ogiltig blob URL' },
         { status: 400 }
       );
     }
