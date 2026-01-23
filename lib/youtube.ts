@@ -27,6 +27,98 @@ export function extractVideoId(url: string): string | null {
   return null;
 }
 
+export function extractPlaylistId(url: string): string | null {
+  // Match playlist URLs like:
+  // https://www.youtube.com/playlist?list=PLxxxxxx
+  // https://www.youtube.com/watch?v=xxx&list=PLxxxxxx
+  const patterns = [
+    /[?&]list=([^&\n?#]+)/,
+  ];
+
+  for (const pattern of patterns) {
+    const match = url.match(pattern);
+    if (match) {
+      return match[1];
+    }
+  }
+
+  return null;
+}
+
+export function isPlaylistUrl(url: string): boolean {
+  return extractPlaylistId(url) !== null;
+}
+
+interface PlaylistMetadata {
+  id: string;
+  title: string;
+  description: string;
+  channelId: string;
+  channelTitle: string;
+  videoCount: number;
+  thumbnail: string;
+}
+
+interface PlaylistVideo {
+  videoId: string;
+  title: string;
+  thumbnail: string;
+  position: number;
+}
+
+export async function fetchPlaylistMetadata(playlistId: string): Promise<PlaylistMetadata> {
+  const apiKey = process.env.SUPADATA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('SUPADATA_API_KEY är inte konfigurerad');
+  }
+
+  const response = await fetch(
+    `https://api.supadata.ai/v1/youtube/playlist?id=${playlistId}`,
+    {
+      headers: {
+        'x-api-key': apiKey,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Spellistan hittades inte');
+    }
+    throw new Error(`API-fel: ${response.status}`);
+  }
+
+  return response.json();
+}
+
+export async function fetchPlaylistVideos(playlistId: string): Promise<PlaylistVideo[]> {
+  const apiKey = process.env.SUPADATA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('SUPADATA_API_KEY är inte konfigurerad');
+  }
+
+  const response = await fetch(
+    `https://api.supadata.ai/v1/youtube/playlist/videos?id=${playlistId}`,
+    {
+      headers: {
+        'x-api-key': apiKey,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Spellistan hittades inte');
+    }
+    throw new Error(`API-fel: ${response.status}`);
+  }
+
+  const data = await response.json();
+  return data.videos || data || [];
+}
+
 export async function fetchTranscript(videoId: string, preferredLang?: string): Promise<string> {
   const apiKey = process.env.SUPADATA_API_KEY;
 
@@ -112,5 +204,99 @@ export async function fetchVideoTitle(videoId: string): Promise<string> {
     return data.title || `Video ${videoId}`;
   } catch {
     return `Video ${videoId}`;
+  }
+}
+
+// Video metadata from Supadata API
+export interface VideoMetadata {
+  videoId: string;
+  title: string;
+  description: string | null;
+  durationSeconds: number | null;
+  channelId: string | null;
+  channelName: string | null;
+  thumbnailUrl: string | null;
+  publishedAt: string | null;
+  viewCount: number | null;
+  likeCount: number | null;
+  tags: string[];
+  transcriptLanguage?: string;
+}
+
+interface SupadataVideoResponse {
+  id: string;
+  title: string;
+  description?: string;
+  duration?: number;
+  channel?: {
+    id: string;
+    name: string;
+  };
+  thumbnail?: string;
+  uploadDate?: string;
+  viewCount?: number;
+  likeCount?: number;
+  tags?: string[];
+  transcriptLanguages?: string[];
+}
+
+export async function fetchVideoMetadata(videoId: string): Promise<VideoMetadata> {
+  const apiKey = process.env.SUPADATA_API_KEY;
+
+  if (!apiKey) {
+    throw new Error('SUPADATA_API_KEY är inte konfigurerad');
+  }
+
+  const response = await fetch(
+    `https://api.supadata.ai/v1/youtube/video?videoId=${videoId}`,
+    {
+      headers: {
+        'x-api-key': apiKey,
+      },
+    }
+  );
+
+  if (!response.ok) {
+    if (response.status === 404) {
+      throw new Error('Videon hittades inte');
+    }
+    throw new Error(`API-fel: ${response.status}`);
+  }
+
+  const data: SupadataVideoResponse = await response.json();
+
+  return {
+    videoId: data.id || videoId,
+    title: data.title || `Video ${videoId}`,
+    description: data.description || null,
+    durationSeconds: data.duration || null,
+    channelId: data.channel?.id || null,
+    channelName: data.channel?.name || null,
+    thumbnailUrl: data.thumbnail || null,
+    publishedAt: data.uploadDate || null,
+    viewCount: data.viewCount ?? null,
+    likeCount: data.likeCount ?? null,
+    tags: data.tags || [],
+  };
+}
+
+// Fallback to oEmbed if Supadata fails (free, no API key needed)
+export async function fetchVideoMetadataFallback(videoId: string): Promise<Partial<VideoMetadata>> {
+  try {
+    const response = await fetch(
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+    );
+    const data = await response.json();
+    return {
+      videoId,
+      title: data.title || `Video ${videoId}`,
+      channelName: data.author_name || null,
+      thumbnailUrl: data.thumbnail_url || null,
+    };
+  } catch {
+    return {
+      videoId,
+      title: `Video ${videoId}`,
+    };
   }
 }

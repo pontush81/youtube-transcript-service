@@ -15,6 +15,20 @@ export interface TranscriptItem {
   size: number;
   indexed: boolean;
   isOwner?: boolean;
+  // Metadata fields
+  thumbnailUrl?: string;
+  channelId?: string;
+  channelName?: string;
+  durationSeconds?: number;
+  publishedAt?: string;
+  viewCount?: number;
+  tags?: string[];
+}
+
+export interface Channel {
+  channelId: string;
+  channelName: string;
+  videoCount: number;
 }
 
 // Extract title from Markdown content (first line is always "# {title}")
@@ -40,8 +54,10 @@ export async function GET(request: NextRequest) {
       userTranscripts.rows.forEach(r => userTranscriptIds.add(r.video_id));
     }
 
-    // Check for "my" filter
+    // Check for filters
     const showMyOnly = request.nextUrl.searchParams.get('my') === 'true';
+    const channelFilter = request.nextUrl.searchParams.get('channel');
+    const sortBy = request.nextUrl.searchParams.get('sort') || 'uploadedAt';
 
     // Get cached titles from database (fast)
     const cachedTitles = await sql`
@@ -51,6 +67,12 @@ export async function GET(request: NextRequest) {
     `;
     const titleCache = new Map(
       cachedTitles.rows.map(r => [r.video_id, { title: r.video_title, blobUrl: r.blob_url }])
+    );
+
+    // Get video metadata
+    const metadataResult = await sql`SELECT * FROM video_metadata`;
+    const metadataMap = new Map(
+      metadataResult.rows.map(r => [r.video_id, r])
     );
 
     const { blobs } = await list({ prefix: 'transcripts/' });
@@ -81,61 +103,112 @@ export async function GET(request: NextRequest) {
     const allTranscripts: TranscriptItem[] = await Promise.all(
       Array.from(videoMap.values()).map(async ({ blob, normalizedId }) => {
         const isOwner = userTranscriptIds.has(normalizedId);
+        const metadata = metadataMap.get(normalizedId);
 
-        // Try to get title from cache first (fast path)
-        const cached = titleCache.get(normalizedId);
-        if (cached) {
-          return {
-            videoId: normalizedId,
-            title: cached.title,
-            url: blob.url,
-            uploadedAt: blob.uploadedAt,
-            size: blob.size,
-            indexed: true,
-            isOwner,
-          };
+        // Try to get title from metadata, then cache, then fallback
+        let title = metadata?.title;
+        if (!title) {
+          const cached = titleCache.get(normalizedId);
+          title = cached?.title;
         }
 
-        // Fallback: fetch from blob (slow path - only for non-indexed videos)
-        let title = normalizedId;
-        try {
-          const response = await fetch(blob.url);
-          if (response.ok) {
-            const text = await response.text();
-            const extractedTitle = extractTitleFromMarkdown(text);
-            if (extractedTitle) {
-              title = extractedTitle;
+        if (!title) {
+          // Fallback: fetch from blob (slow path)
+          try {
+            const response = await fetch(blob.url);
+            if (response.ok) {
+              const text = await response.text();
+              const extractedTitle = extractTitleFromMarkdown(text);
+              if (extractedTitle) {
+                title = extractedTitle;
+              }
             }
+          } catch {
+            // If file can't be fetched, use videoId
           }
-        } catch {
-          // If file can't be fetched, use videoId
         }
 
         return {
           videoId: normalizedId,
-          title,
+          title: title || normalizedId,
           url: blob.url,
           uploadedAt: blob.uploadedAt,
           size: blob.size,
-          indexed: false,
+          indexed: titleCache.has(normalizedId),
           isOwner,
+          // Metadata fields
+          thumbnailUrl: metadata?.thumbnail_url || undefined,
+          channelId: metadata?.channel_id || undefined,
+          channelName: metadata?.channel_name || undefined,
+          durationSeconds: metadata?.duration_seconds || undefined,
+          publishedAt: metadata?.published_at || undefined,
+          viewCount: metadata?.view_count || undefined,
+          tags: metadata?.tags || undefined,
         };
       })
     );
 
-    // Filter to user's transcripts if requested
-    const transcripts = showMyOnly
-      ? allTranscripts.filter(t => t.isOwner)
-      : allTranscripts;
+    // Apply filters
+    let transcripts = allTranscripts;
 
-    // Sort by upload date (newest first)
-    transcripts.sort((a, b) =>
-      new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
-    );
+    if (showMyOnly) {
+      transcripts = transcripts.filter(t => t.isOwner);
+    }
+
+    if (channelFilter) {
+      transcripts = transcripts.filter(t => t.channelId === channelFilter);
+    }
+
+    // Sort
+    switch (sortBy) {
+      case 'duration':
+        transcripts.sort((a, b) => (b.durationSeconds || 0) - (a.durationSeconds || 0));
+        break;
+      case 'views':
+        transcripts.sort((a, b) => (b.viewCount || 0) - (a.viewCount || 0));
+        break;
+      case 'published':
+        transcripts.sort((a, b) => {
+          const dateA = a.publishedAt ? new Date(a.publishedAt).getTime() : 0;
+          const dateB = b.publishedAt ? new Date(b.publishedAt).getTime() : 0;
+          return dateB - dateA;
+        });
+        break;
+      case 'title':
+        transcripts.sort((a, b) => a.title.localeCompare(b.title, 'sv'));
+        break;
+      case 'uploadedAt':
+      default:
+        transcripts.sort((a, b) =>
+          new Date(b.uploadedAt).getTime() - new Date(a.uploadedAt).getTime()
+        );
+    }
+
+    // Get unique channels for filter dropdown
+    const channelMap = new Map<string, { name: string; count: number }>();
+    for (const t of allTranscripts) {
+      if (t.channelId && t.channelName) {
+        const existing = channelMap.get(t.channelId);
+        if (existing) {
+          existing.count++;
+        } else {
+          channelMap.set(t.channelId, { name: t.channelName, count: 1 });
+        }
+      }
+    }
+
+    const channels: Channel[] = Array.from(channelMap.entries())
+      .map(([id, data]) => ({
+        channelId: id,
+        channelName: data.name,
+        videoCount: data.count,
+      }))
+      .sort((a, b) => b.videoCount - a.videoCount);
 
     return NextResponse.json(
       {
         transcripts,
+        channels,
         isAuthenticated: !!userId,
         userTranscriptCount: userTranscriptIds.size,
       },

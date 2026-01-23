@@ -26,6 +26,7 @@ export default function TranscriptViewPage() {
   const [summarizing, setSummarizing] = useState(false);
   const [summarizeError, setSummarizeError] = useState<string | null>(null);
   const [hasSummary, setHasSummary] = useState(false);
+  const [isOwner, setIsOwner] = useState(false);
 
   useEffect(() => {
     async function fetchTranscript() {
@@ -36,7 +37,7 @@ export default function TranscriptViewPage() {
 
         const data = await response.json();
         const transcript = data.transcripts.find(
-          (t: { videoId: string; url: string }) => t.videoId === id
+          (t: { videoId: string; url: string; isOwner?: boolean }) => t.videoId === id
         );
 
         if (!transcript) {
@@ -45,6 +46,7 @@ export default function TranscriptViewPage() {
 
         setBlobUrl(transcript.url);
         setTitle(transcript.title || '');
+        setIsOwner(transcript.isOwner || false);
 
         // Hämta innehållet
         const contentResponse = await fetch(transcript.url);
@@ -116,7 +118,9 @@ export default function TranscriptViewPage() {
   };
 
   const handleDelete = async () => {
-    if (!blobUrl || deleting || !adminKey) return;
+    if (!blobUrl || deleting) return;
+    // Require admin key only if not owner
+    if (!isOwner && !adminKey) return;
 
     setDeleting(true);
     setDeleteError(null);
@@ -125,7 +129,10 @@ export default function TranscriptViewPage() {
       const response = await fetch('/api/delete', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blobUrl, adminKey }),
+        body: JSON.stringify({
+          blobUrl,
+          adminKey: adminKey || undefined,
+        }),
       });
 
       const data = await response.json();
@@ -377,21 +384,25 @@ export default function TranscriptViewPage() {
               Radera transkript
             </h3>
             <p className="text-gray-600 mb-4">
-              Är du säker på att du vill radera detta transkript? Detta kan inte ångras.
+              {isOwner
+                ? 'Är du säker på att du vill radera detta transkript? Detta kan inte ångras.'
+                : 'Detta är inte ditt transkript. Ange admin-nyckel för att radera det.'}
             </p>
 
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">
-                Admin-nyckel
-              </label>
-              <input
-                type="password"
-                value={adminKey}
-                onChange={(e) => setAdminKey(e.target.value)}
-                className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                placeholder="Ange admin-nyckel"
-              />
-            </div>
+            {!isOwner && (
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Admin-nyckel
+                </label>
+                <input
+                  type="password"
+                  value={adminKey}
+                  onChange={(e) => setAdminKey(e.target.value)}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                  placeholder="Ange admin-nyckel"
+                />
+              </div>
+            )}
 
             {deleteError && (
               <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
@@ -412,7 +423,7 @@ export default function TranscriptViewPage() {
               </button>
               <button
                 onClick={handleDelete}
-                disabled={deleting || !adminKey}
+                disabled={deleting || (!isOwner && !adminKey)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 {deleting ? 'Raderar...' : 'Radera'}

@@ -3,91 +3,301 @@
 import { useState } from 'react';
 import Link from 'next/link';
 import { TranscriptListSkeleton } from '@/components/Skeleton';
-import { useTranscripts } from '@/lib/hooks/useTranscripts';
+import { useTranscripts, TranscriptItem, Channel, formatDuration, formatViewCount } from '@/lib/hooks/useTranscripts';
+
+type SortOption = 'uploadedAt' | 'duration' | 'views' | 'published' | 'title';
 
 export default function TranscriptsPage() {
   const [showMyOnly, setShowMyOnly] = useState(false);
-  const { transcripts, isLoading: loading, error, isAuthenticated, userTranscriptCount } = useTranscripts(showMyOnly);
+  const [channelFilter, setChannelFilter] = useState<string | undefined>();
+  const [sortBy, setSortBy] = useState<SortOption>('uploadedAt');
   const [searchQuery, setSearchQuery] = useState('');
+
+  const {
+    transcripts,
+    channels,
+    isLoading: loading,
+    error,
+    isAuthenticated,
+    userTranscriptCount,
+    mutate
+  } = useTranscripts({ myOnly: showMyOnly, channelId: channelFilter, sortBy });
+
+  // Selection and delete state
+  const [editMode, setEditMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [adminKey, setAdminKey] = useState('');
+  const [deleting, setDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+  const [deleteResults, setDeleteResults] = useState<Array<{videoId: string; success: boolean; error?: string}> | null>(null);
 
   const formatDate = (dateString: string) => {
     return new Date(dateString).toLocaleDateString('sv-SE', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
     });
-  };
-
-  const formatSize = (bytes: number) => {
-    if (bytes < 1024) return `${bytes} B`;
-    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   // Filter transcripts by search query
   const filteredTranscripts = transcripts.filter((transcript) =>
-    transcript.title.toLowerCase().includes(searchQuery.toLowerCase())
+    transcript.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+    transcript.channelName?.toLowerCase().includes(searchQuery.toLowerCase())
   );
+
+  const toggleSelection = (videoId: string) => {
+    setSelectedIds(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(videoId)) {
+        newSet.delete(videoId);
+      } else {
+        newSet.add(videoId);
+      }
+      return newSet;
+    });
+  };
+
+  const selectAll = () => {
+    setSelectedIds(new Set(filteredTranscripts.map(t => t.videoId)));
+  };
+
+  const selectNone = () => {
+    setSelectedIds(new Set());
+  };
+
+  const selectOwn = () => {
+    setSelectedIds(new Set(filteredTranscripts.filter(t => t.isOwner).map(t => t.videoId)));
+  };
+
+  const selectedTranscripts = filteredTranscripts.filter(t => selectedIds.has(t.videoId));
+  const allSelectedAreOwned = selectedTranscripts.every(t => t.isOwner);
+  const someSelectedNotOwned = selectedTranscripts.some(t => !t.isOwner);
+
+  const handleDelete = async () => {
+    if (selectedIds.size === 0) return;
+
+    if (someSelectedNotOwned && !adminKey) {
+      setDeleteError('Admin-nyckel krävs för att radera andras transkript');
+      return;
+    }
+
+    setDeleting(true);
+    setDeleteError(null);
+    setDeleteResults(null);
+
+    try {
+      const response = await fetch('/api/delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoIds: Array.from(selectedIds),
+          adminKey: adminKey || undefined,
+        }),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Radering misslyckades');
+      }
+
+      setDeleteResults(data.results);
+
+      const successfulIds = new Set<string>(
+        data.results.filter((r: {success: boolean}) => r.success).map((r: {videoId: string}) => r.videoId)
+      );
+      setSelectedIds(prev => {
+        const newSet = new Set(prev);
+        successfulIds.forEach((id: string) => newSet.delete(id));
+        return newSet;
+      });
+
+      mutate();
+
+      if (data.summary.failed === 0) {
+        setTimeout(() => {
+          setShowDeleteModal(false);
+          setDeleteResults(null);
+          setAdminKey('');
+          if (selectedIds.size === 0) {
+            setEditMode(false);
+          }
+        }, 1500);
+      }
+    } catch (err) {
+      setDeleteError(err instanceof Error ? err.message : 'Ett fel uppstod');
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  const cancelEditMode = () => {
+    setEditMode(false);
+    setSelectedIds(new Set());
+  };
+
+  const sortOptions: { value: SortOption; label: string }[] = [
+    { value: 'uploadedAt', label: 'Senast tillagd' },
+    { value: 'published', label: 'Publiceringsdatum' },
+    { value: 'duration', label: 'Längd' },
+    { value: 'views', label: 'Visningar' },
+    { value: 'title', label: 'Titel A-Ö' },
+  ];
 
   return (
     <main className="py-4 sm:py-8 px-4">
-      <div className="max-w-2xl mx-auto">
+      <div className="max-w-3xl mx-auto">
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
               Sparade transkript
             </h1>
             <p className="text-gray-600 text-sm hidden sm:block">
-              Alla transkript som har hämtats och sparats
+              {transcripts.length} transkript från {channels.length} kanaler
             </p>
           </div>
-          <Link
-            href="/chat"
-            className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
-          >
-            <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-            <span className="hidden sm:inline">Chatta</span>
-          </Link>
+          <div className="flex items-center gap-2">
+            {!editMode && transcripts.length > 0 && (
+              <button
+                onClick={() => setEditMode(true)}
+                className="flex items-center gap-1.5 px-3 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                </svg>
+                <span className="hidden sm:inline">Redigera</span>
+              </button>
+            )}
+            {editMode && (
+              <button
+                onClick={cancelEditMode}
+                className="flex items-center gap-1.5 px-3 py-2 text-gray-600 hover:text-gray-900 text-sm font-medium rounded-lg hover:bg-gray-100 transition-colors"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
+                <span className="hidden sm:inline">Avbryt</span>
+              </button>
+            )}
+            <Link
+              href="/chat"
+              className="flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white text-sm font-medium rounded-lg hover:bg-blue-700 transition-colors"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+              </svg>
+              <span className="hidden sm:inline">Chatta</span>
+            </Link>
+          </div>
         </div>
 
-        {/* Filter tabs for authenticated users */}
-        {!loading && isAuthenticated && userTranscriptCount > 0 && (
-          <div className="flex gap-2 mb-4">
-            <button
-              onClick={() => setShowMyOnly(false)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
-                !showMyOnly
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Alla transkript
-            </button>
-            <button
-              onClick={() => setShowMyOnly(true)}
-              className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
-                showMyOnly
-                  ? 'bg-blue-100 text-blue-700'
-                  : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
-              }`}
-            >
-              Mina transkript
-              <span className={`text-xs px-1.5 py-0.5 rounded-full ${
-                showMyOnly ? 'bg-blue-200' : 'bg-gray-200'
-              }`}>
-                {userTranscriptCount}
-              </span>
-            </button>
+        {/* Edit mode toolbar */}
+        {editMode && filteredTranscripts.length > 0 && (
+          <div className="mb-4 p-3 bg-gray-50 rounded-lg border border-gray-200">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <div className="flex items-center gap-3">
+                <span className="text-sm text-gray-600">
+                  {selectedIds.size} valda
+                </span>
+                <div className="flex gap-2 text-sm">
+                  <button onClick={selectAll} className="text-blue-600 hover:text-blue-800">
+                    Alla
+                  </button>
+                  <span className="text-gray-300">|</span>
+                  <button onClick={selectNone} className="text-blue-600 hover:text-blue-800">
+                    Inga
+                  </button>
+                  {userTranscriptCount > 0 && (
+                    <>
+                      <span className="text-gray-300">|</span>
+                      <button onClick={selectOwn} className="text-blue-600 hover:text-blue-800">
+                        Mina
+                      </button>
+                    </>
+                  )}
+                </div>
+              </div>
+              <button
+                onClick={() => setShowDeleteModal(true)}
+                disabled={selectedIds.size === 0}
+                className="flex items-center gap-1.5 px-3 py-1.5 bg-red-600 text-white text-sm font-medium rounded-lg hover:bg-red-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+                Radera ({selectedIds.size})
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Search input */}
+        {/* Filters row */}
         {!loading && transcripts.length > 0 && (
-          <div className="mb-4">
+          <div className="mb-4 space-y-3">
+            {/* Filter tabs */}
+            <div className="flex flex-wrap gap-2">
+              {isAuthenticated && userTranscriptCount > 0 && (
+                <>
+                  <button
+                    onClick={() => setShowMyOnly(false)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${
+                      !showMyOnly
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Alla
+                  </button>
+                  <button
+                    onClick={() => setShowMyOnly(true)}
+                    className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5 ${
+                      showMyOnly
+                        ? 'bg-blue-100 text-blue-700'
+                        : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                    }`}
+                  >
+                    Mina
+                    <span className={`text-xs px-1.5 py-0.5 rounded-full ${
+                      showMyOnly ? 'bg-blue-200' : 'bg-gray-200'
+                    }`}>
+                      {userTranscriptCount}
+                    </span>
+                  </button>
+                </>
+              )}
+
+              {/* Channel filter */}
+              {channels.length > 1 && (
+                <select
+                  value={channelFilter || ''}
+                  onChange={(e) => setChannelFilter(e.target.value || undefined)}
+                  className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500"
+                >
+                  <option value="">Alla kanaler</option>
+                  {channels.map((channel) => (
+                    <option key={channel.channelId} value={channel.channelId}>
+                      {channel.channelName} ({channel.videoCount})
+                    </option>
+                  ))}
+                </select>
+              )}
+
+              {/* Sort */}
+              <select
+                value={sortBy}
+                onChange={(e) => setSortBy(e.target.value as SortOption)}
+                className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500"
+              >
+                {sortOptions.map((option) => (
+                  <option key={option.value} value={option.value}>
+                    {option.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {/* Search */}
             <div className="relative">
               <svg
                 className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400"
@@ -101,7 +311,7 @@ export default function TranscriptsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Sök transkript..."
+                placeholder="Sök titel eller kanal..."
                 className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
               {searchQuery && (
@@ -155,59 +365,244 @@ export default function TranscriptsPage() {
             </div>
           ) : (
             <ul className="divide-y divide-gray-100">
-              {filteredTranscripts.map((transcript, index) => (
-                <li key={index}>
-                  <Link
-                    href={`/transcripts/${transcript.videoId}`}
-                    className="flex items-center gap-3 p-3 sm:p-4 hover:bg-gray-50 active:bg-gray-100 transition-colors"
-                  >
-                    <div className="flex-shrink-0 w-10 h-10 sm:w-11 sm:h-11 bg-red-100 rounded-lg flex items-center justify-center">
-                      <svg
-                        xmlns="http://www.w3.org/2000/svg"
-                        className="h-5 w-5 text-red-600"
-                        viewBox="0 0 20 20"
-                        fill="currentColor"
-                      >
-                        <path d="M2 6a2 2 0 012-2h6a2 2 0 012 2v8a2 2 0 01-2 2H4a2 2 0 01-2-2V6zM14.553 7.106A1 1 0 0014 8v4a1 1 0 00.553.894l2 1A1 1 0 0018 13V7a1 1 0 00-1.447-.894l-2 1z" />
-                      </svg>
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-center gap-2">
-                        <p className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2 sm:truncate">
-                          {transcript.title}
-                        </p>
-                        {transcript.isOwner && (
-                          <span className="flex-shrink-0 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full hidden sm:inline">
-                            Din
-                          </span>
-                        )}
-                      </div>
-                      <div className="flex items-center gap-2 text-xs sm:text-sm text-gray-500 mt-0.5">
-                        <span>{formatDate(transcript.uploadedAt)}</span>
-                        <span className="text-gray-300">·</span>
-                        <span>{formatSize(transcript.size)}</span>
-                      </div>
-                    </div>
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="h-5 w-5 text-gray-400 flex-shrink-0"
-                      viewBox="0 0 20 20"
-                      fill="currentColor"
-                    >
-                      <path
-                        fillRule="evenodd"
-                        d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                        clipRule="evenodd"
-                      />
-                    </svg>
-                  </Link>
-                </li>
+              {filteredTranscripts.map((transcript) => (
+                <TranscriptRow
+                  key={transcript.videoId}
+                  transcript={transcript}
+                  editMode={editMode}
+                  isSelected={selectedIds.has(transcript.videoId)}
+                  onToggleSelect={() => toggleSelection(transcript.videoId)}
+                  formatDate={formatDate}
+                />
               ))}
             </ul>
           )}
         </div>
-
       </div>
+
+      {/* Delete Modal */}
+      {showDeleteModal && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+          <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
+            <h3 className="text-lg font-bold text-gray-900 mb-2">
+              Radera {selectedIds.size} transkript
+            </h3>
+
+            {!deleteResults && (
+              <>
+                <p className="text-gray-600 mb-4">
+                  {allSelectedAreOwned
+                    ? 'Är du säker på att du vill radera dessa transkript? Detta kan inte ångras.'
+                    : 'Några av de valda transkripten är inte dina. Ange admin-nyckel för att radera dem.'}
+                </p>
+
+                {someSelectedNotOwned && (
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Admin-nyckel
+                    </label>
+                    <input
+                      type="password"
+                      value={adminKey}
+                      onChange={(e) => setAdminKey(e.target.value)}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
+                      placeholder="Krävs för att radera andras transkript"
+                    />
+                  </div>
+                )}
+              </>
+            )}
+
+            {deleteResults && (
+              <div className="mb-4">
+                <div className="max-h-48 overflow-y-auto space-y-1">
+                  {deleteResults.map((result) => (
+                    <div
+                      key={result.videoId}
+                      className={`flex items-center gap-2 text-sm ${
+                        result.success ? 'text-green-700' : 'text-red-700'
+                      }`}
+                    >
+                      {result.success ? (
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                        </svg>
+                      ) : (
+                        <svg className="w-4 h-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                      )}
+                      <span className="truncate">
+                        {result.videoId}
+                        {result.error && `: ${result.error}`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {deleteError && (
+              <div className="mb-4 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex gap-3 justify-end">
+              <button
+                onClick={() => {
+                  setShowDeleteModal(false);
+                  setAdminKey('');
+                  setDeleteError(null);
+                  setDeleteResults(null);
+                }}
+                className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
+              >
+                {deleteResults ? 'Stäng' : 'Avbryt'}
+              </button>
+              {!deleteResults && (
+                <button
+                  onClick={handleDelete}
+                  disabled={deleting || (someSelectedNotOwned && !adminKey)}
+                  className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {deleting ? 'Raderar...' : 'Radera'}
+                </button>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </main>
+  );
+}
+
+// Transcript row component with thumbnail
+function TranscriptRow({
+  transcript,
+  editMode,
+  isSelected,
+  onToggleSelect,
+  formatDate,
+}: {
+  transcript: TranscriptItem;
+  editMode: boolean;
+  isSelected: boolean;
+  onToggleSelect: () => void;
+  formatDate: (date: string) => string;
+}) {
+  const content = (
+    <>
+      {editMode && (
+        <div className="flex-shrink-0">
+          <input
+            type="checkbox"
+            checked={isSelected}
+            onChange={onToggleSelect}
+            onClick={(e) => e.stopPropagation()}
+            className="w-4 h-4 text-blue-600 rounded focus:ring-blue-500"
+          />
+        </div>
+      )}
+
+      {/* Thumbnail */}
+      <div className="flex-shrink-0 w-24 sm:w-32 aspect-video bg-gray-200 rounded-lg overflow-hidden">
+        {transcript.thumbnailUrl ? (
+          <img
+            src={transcript.thumbnailUrl}
+            alt=""
+            className="w-full h-full object-cover"
+            loading="lazy"
+          />
+        ) : (
+          <div className="w-full h-full flex items-center justify-center bg-gray-100">
+            <svg
+              className="w-8 h-8 text-gray-400"
+              fill="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
+            </svg>
+          </div>
+        )}
+      </div>
+
+      {/* Content */}
+      <div className="min-w-0 flex-1">
+        <div className="flex items-start gap-2">
+          <p className="font-medium text-gray-900 text-sm sm:text-base line-clamp-2">
+            {transcript.title}
+          </p>
+          {transcript.isOwner && (
+            <span className="flex-shrink-0 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full">
+              Din
+            </span>
+          )}
+        </div>
+
+        {/* Channel name */}
+        {transcript.channelName && (
+          <p className="text-sm text-gray-600 mt-0.5 truncate">
+            {transcript.channelName}
+          </p>
+        )}
+
+        {/* Meta info */}
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-0.5 text-xs text-gray-500 mt-1">
+          {transcript.durationSeconds && (
+            <span className="flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+              </svg>
+              {formatDuration(transcript.durationSeconds)}
+            </span>
+          )}
+          {transcript.viewCount && (
+            <span className="hidden sm:flex items-center gap-1">
+              <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              {formatViewCount(transcript.viewCount)}
+            </span>
+          )}
+          <span className="text-gray-300 hidden sm:inline">·</span>
+          <span>{formatDate(transcript.uploadedAt)}</span>
+        </div>
+      </div>
+
+      <svg
+        className="h-5 w-5 text-gray-400 flex-shrink-0"
+        fill="none"
+        stroke="currentColor"
+        viewBox="0 0 24 24"
+      >
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+      </svg>
+    </>
+  );
+
+  if (editMode) {
+    return (
+      <li
+        onClick={onToggleSelect}
+        className={`flex items-center gap-3 p-3 hover:bg-gray-50 active:bg-gray-100 transition-colors cursor-pointer ${
+          isSelected ? 'bg-blue-50' : ''
+        }`}
+      >
+        {content}
+      </li>
+    );
+  }
+
+  return (
+    <li>
+      <Link
+        href={`/transcripts/${transcript.videoId}`}
+        className="flex items-center gap-3 p-3 hover:bg-gray-50 active:bg-gray-100 transition-colors"
+      >
+        {content}
+      </Link>
+    </li>
   );
 }

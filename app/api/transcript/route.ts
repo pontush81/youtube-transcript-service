@@ -7,6 +7,7 @@ import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rat
 import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
+import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
 // export const runtime = 'edge';
@@ -108,6 +109,14 @@ export async function POST(request: NextRequest) {
     } catch (error) {
       // Log but don't fail - embeddings are optional
       console.error('Failed to create embeddings:', error);
+    }
+
+    // Fetch and save video metadata (channel, duration, thumbnail, etc.)
+    try {
+      await fetchAndSaveVideoMetadata(videoId);
+    } catch (error) {
+      // Log but don't fail - metadata is optional
+      console.error('Failed to save video metadata:', error);
     }
 
     // Link transcript to user if logged in
