@@ -26,44 +26,38 @@ export async function POST(request: NextRequest) {
     `;
     results.push(`Current user_transcripts.user_id type: ${userTranscriptsCol.rows[0]?.data_type || 'not found'}`);
 
+    // Step 1: Drop ALL NextAuth tables first (they have foreign keys to users)
+    await sql`DROP TABLE IF EXISTS accounts CASCADE`;
+    await sql`DROP TABLE IF EXISTS sessions CASCADE`;
+    await sql`DROP TABLE IF EXISTS verification_tokens CASCADE`;
+    results.push('Dropped NextAuth tables (accounts, sessions, verification_tokens)');
+
     // Only migrate if needed
     if (usersCol.rows[0]?.data_type === 'uuid') {
-      // Step 1: Drop foreign key constraint if exists
+      // Step 2: Drop foreign key constraint on user_transcripts if exists
       try {
         await sql`
           ALTER TABLE user_transcripts
           DROP CONSTRAINT IF EXISTS user_transcripts_user_id_fkey
         `;
-        results.push('Dropped foreign key constraint');
+        results.push('Dropped user_transcripts foreign key constraint');
       } catch (e) {
-        results.push(`Foreign key drop skipped: ${e}`);
+        results.push(`Foreign key drop note: ${e}`);
       }
 
-      // Step 2: Alter users.id to TEXT
-      await sql`ALTER TABLE users ALTER COLUMN id TYPE TEXT`;
+      // Step 3: Alter users.id to TEXT
+      await sql`ALTER TABLE users ALTER COLUMN id TYPE TEXT USING id::TEXT`;
       results.push('Altered users.id to TEXT');
 
-      // Step 3: Alter user_transcripts.user_id to TEXT
-      await sql`ALTER TABLE user_transcripts ALTER COLUMN user_id TYPE TEXT`;
+      // Step 4: Alter user_transcripts.user_id to TEXT
+      await sql`ALTER TABLE user_transcripts ALTER COLUMN user_id TYPE TEXT USING user_id::TEXT`;
       results.push('Altered user_transcripts.user_id to TEXT');
-
-      // Step 4: Re-add foreign key (optional, Clerk IDs won't match old UUIDs anyway)
-      // Skipping this since old user data won't match Clerk IDs
 
       results.push('Migration completed successfully!');
     } else if (usersCol.rows[0]?.data_type === 'text') {
       results.push('Already migrated to TEXT - no action needed');
     } else {
-      results.push('Users table not found or unexpected schema');
-    }
-
-    // Drop old NextAuth tables
-    const dropOld = request.nextUrl.searchParams.get('dropOld') === 'true';
-    if (dropOld) {
-      await sql`DROP TABLE IF EXISTS accounts`;
-      await sql`DROP TABLE IF EXISTS sessions`;
-      await sql`DROP TABLE IF EXISTS verification_tokens`;
-      results.push('Dropped old NextAuth tables (accounts, sessions, verification_tokens)');
+      results.push('Users table not found - will be created on first Clerk webhook');
     }
 
     return NextResponse.json({ success: true, results });
