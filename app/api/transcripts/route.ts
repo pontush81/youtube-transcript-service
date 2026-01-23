@@ -2,7 +2,7 @@ import { list } from '@vercel/blob';
 import { NextRequest, NextResponse } from 'next/server';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
 import { sql } from '@/lib/db';
-import { auth } from '@/lib/auth';
+import { auth } from '@clerk/nextjs/server';
 
 // Remove edge runtime - need nodejs for database access
 // export const runtime = 'edge';
@@ -29,8 +29,7 @@ function extractTitleFromMarkdown(content: string): string | null {
 export async function GET(request: NextRequest) {
   try {
     // Check if user is logged in
-    const session = await auth();
-    const userId = session?.user?.id;
+    const { userId } = await auth();
 
     // Get user's transcripts if logged in
     const userTranscriptIds = new Set<string>();
