@@ -7,6 +7,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',
   '/api/webhooks/(.*)',  // Clerk webhooks
   '/api/webhook(.*)',    // Zapier webhook (uses API key)
+  '/api/db/(.*)',        // Admin DB routes (use admin key)
+  '/api/metadata/(.*)',  // Metadata backfill (use admin key)
 ]);
 
 // Security headers
