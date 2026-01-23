@@ -4,13 +4,13 @@ import { list } from '@vercel/blob';
 import { sql } from '@/lib/db';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
+import { hasValidAdminKey } from '@/lib/admin';
 
 export const maxDuration = 300; // 5 minutes for backfill
 
 export async function POST(request: NextRequest) {
   // Allow either Clerk auth or admin key
-  const adminKey = request.headers.get('x-admin-key');
-  const isAdmin = adminKey === process.env.ADMIN_KEY;
+  const isAdmin = hasValidAdminKey(request);
 
   if (!isAdmin) {
     const { userId } = await auth();
@@ -96,8 +96,7 @@ export async function POST(request: NextRequest) {
 // GET to check status
 export async function GET(request: NextRequest) {
   // Allow either Clerk auth or admin key
-  const adminKey = request.headers.get('x-admin-key');
-  const isAdmin = adminKey === process.env.ADMIN_KEY;
+  const isAdmin = hasValidAdminKey(request);
 
   if (!isAdmin) {
     const { userId } = await auth();

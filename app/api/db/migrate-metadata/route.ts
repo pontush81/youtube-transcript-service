@@ -1,24 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { timingSafeEqual } from 'crypto';
+import { hasValidAdminKey } from '@/lib/admin';
 import { sql } from '@/lib/db';
 
-function secureCompare(a: string, b: string): boolean {
-  if (typeof a !== 'string' || typeof b !== 'string') return false;
-  const aBuffer = Buffer.from(a);
-  const bBuffer = Buffer.from(b);
-  if (aBuffer.length !== bBuffer.length) {
-    timingSafeEqual(aBuffer, aBuffer);
-    return false;
-  }
-  return timingSafeEqual(aBuffer, bBuffer);
-}
-
 export async function POST(request: NextRequest) {
-  // Require admin key for security
-  const adminKey = request.headers.get('x-admin-key');
-  const validKey = process.env.ADMIN_KEY;
-
-  if (!adminKey || !validKey || !secureCompare(adminKey, validKey)) {
+  if (!hasValidAdminKey(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
