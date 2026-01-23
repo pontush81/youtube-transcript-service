@@ -1,5 +1,6 @@
 'use client';
 
+import ReactMarkdown from 'react-markdown';
 import { ChatMessage } from './types';
 import { SourceList } from './SourceList';
 
@@ -34,7 +35,13 @@ export function MessageList({ messages, isLoading }: MessageListProps) {
                 : 'bg-gray-100 text-gray-900'
             }`}
           >
-            <p className="whitespace-pre-wrap">{message.content}</p>
+            {message.role === 'user' ? (
+              <p className="whitespace-pre-wrap">{message.content}</p>
+            ) : (
+              <div className="prose prose-sm max-w-none prose-p:my-2 prose-ul:my-2 prose-ol:my-2 prose-li:my-0.5 prose-strong:text-gray-900">
+                <ReactMarkdown>{message.content}</ReactMarkdown>
+              </div>
+            )}
             {message.role === 'assistant' && message.content === '' && isLoading && (
               <div className="flex items-center gap-1">
                 <div className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" />
