@@ -8,14 +8,16 @@ import { extractYouTubeVideoId } from '@/lib/video-utils';
 export const maxDuration = 300; // 5 minutes for backfill
 
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Optional: require admin key for large backfills
+  // Allow either Clerk auth or admin key
   const adminKey = request.headers.get('x-admin-key');
   const isAdmin = adminKey === process.env.ADMIN_KEY;
+
+  if (!isAdmin) {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+  }
 
   try {
     const body = await request.json().catch(() => ({}));
@@ -92,10 +94,16 @@ export async function POST(request: NextRequest) {
 }
 
 // GET to check status
-export async function GET() {
-  const { userId } = await auth();
-  if (!userId) {
-    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+export async function GET(request: NextRequest) {
+  // Allow either Clerk auth or admin key
+  const adminKey = request.headers.get('x-admin-key');
+  const isAdmin = adminKey === process.env.ADMIN_KEY;
+
+  if (!isAdmin) {
+    const { userId } = await auth();
+    if (!userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
   }
 
   try {
