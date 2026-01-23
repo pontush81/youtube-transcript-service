@@ -88,18 +88,8 @@ export async function checkRateLimit(
 ): Promise<RateLimitResult> {
   const limiter = limiters[type];
 
-  // If Redis not configured, use in-memory fallback in dev only
+  // If Redis not configured, allow but warn
   if (!limiter) {
-    if (process.env.NODE_ENV === 'production') {
-      console.error('CRITICAL: Rate limiting disabled in production!');
-      // Fail closed in production if Redis not configured
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: Date.now() + 60000,
-        limit: 0,
-      };
-    }
     console.warn(`Rate limiting disabled: Redis not configured. Type: ${type}`);
     return {
       allowed: true,
