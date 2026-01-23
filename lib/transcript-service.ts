@@ -31,7 +31,7 @@ interface PlayerResponse {
 }
 
 /**
- * Extract player response from YouTube page
+ * Extract player response from YouTube page using proper brace matching
  */
 async function getPlayerResponse(videoId: string): Promise<PlayerResponse | null> {
   const url = `https://www.youtube.com/watch?v=${videoId}`;
@@ -49,26 +49,54 @@ async function getPlayerResponse(videoId: string): Promise<PlayerResponse | null
 
   const html = await response.text();
 
-  // Extract ytInitialPlayerResponse from the page
-  const playerResponseMatch = html.match(
-    /ytInitialPlayerResponse\s*=\s*({.+?})\s*;/
-  );
+  // Find ytInitialPlayerResponse start
+  const startMarker = 'ytInitialPlayerResponse = ';
+  const startIndex = html.indexOf(startMarker);
 
-  if (!playerResponseMatch) {
-    // Try alternative pattern
-    const altMatch = html.match(/var ytInitialPlayerResponse\s*=\s*({.+?});/);
-    if (!altMatch) {
+  if (startIndex === -1) {
+    // Try alternative marker
+    const altMarker = 'var ytInitialPlayerResponse = ';
+    const altIndex = html.indexOf(altMarker);
+    if (altIndex === -1) {
       return null;
     }
-    try {
-      return JSON.parse(altMatch[1]);
-    } catch {
-      return null;
+    return extractJsonObject(html, altIndex + altMarker.length);
+  }
+
+  return extractJsonObject(html, startIndex + startMarker.length);
+}
+
+/**
+ * Extract a JSON object from a string using proper brace matching
+ */
+function extractJsonObject(str: string, startIndex: number): PlayerResponse | null {
+  let depth = 0;
+  let jsonStart = startIndex;
+  let jsonEnd = startIndex;
+  let started = false;
+
+  for (let i = startIndex; i < str.length; i++) {
+    const char = str[i];
+    if (char === '{') {
+      if (!started) started = true;
+      depth++;
+    } else if (char === '}') {
+      depth--;
+      if (started && depth === 0) {
+        jsonEnd = i + 1;
+        break;
+      }
     }
   }
 
+  if (!started || jsonEnd === startIndex) {
+    return null;
+  }
+
+  const jsonStr = str.substring(jsonStart, jsonEnd);
+
   try {
-    return JSON.parse(playerResponseMatch[1]);
+    return JSON.parse(jsonStr);
   } catch {
     return null;
   }
