@@ -52,12 +52,12 @@ export function VideoSelector({ videos, selectedVideos, onChange }: VideoSelecto
       </div>
 
       <div className="p-2 border-b border-gray-200">
-        <label className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer">
+        <label className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer">
           <input
             type="checkbox"
             checked={isAllSelected}
             onChange={handleToggleAll}
-            className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+            className="w-5 h-5 flex-shrink-0 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <span className="text-sm font-medium">
             Alla ({videos.length})
@@ -69,13 +69,13 @@ export function VideoSelector({ videos, selectedVideos, onChange }: VideoSelecto
         {filteredVideos.map((video) => (
           <label
             key={video.videoId}
-            className="flex items-center gap-2 p-2 rounded hover:bg-gray-50 cursor-pointer"
+            className="flex items-center gap-3 p-2 rounded hover:bg-gray-50 cursor-pointer"
           >
             <input
               type="checkbox"
               checked={isAllSelected || selectedSet.has(video.videoId)}
               onChange={() => handleToggleVideo(video.videoId)}
-              className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+              className="w-5 h-5 flex-shrink-0 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
             />
             <span className="text-sm truncate" title={video.title}>
               {video.title}
