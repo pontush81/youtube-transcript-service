@@ -40,10 +40,10 @@ function addSecurityHeaders(response: NextResponse) {
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https: blob:",
     "font-src 'self' data:",
-    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://accounts.google.com",
+    "connect-src 'self' https://api.openai.com https://*.upstash.io https://*.vercel-storage.com https://*.youtube.com https://*.supadata.ai https://accounts.google.com https://api.resend.com",
     "frame-src 'self' https://www.youtube.com https://accounts.google.com",
     "frame-ancestors 'none'",
-    "form-action 'self' https://accounts.google.com https://github.com",
+    "form-action 'self' https://accounts.google.com",
     "base-uri 'self'",
     "object-src 'none'",
   ].join('; ');
