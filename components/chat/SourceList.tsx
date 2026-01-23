@@ -42,6 +42,8 @@ export function SourceList({ sources }: SourceListProps) {
           <li key={index} className="flex items-center gap-1">
             <Link
               href={`/transcripts/${source.videoId}`}
+              target="_blank"
+              rel="noopener noreferrer"
               className="text-xs text-blue-600 hover:text-blue-800 hover:underline line-clamp-1"
             >
               {source.title}
