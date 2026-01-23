@@ -3,7 +3,7 @@ import { getAIProvider } from '@/lib/ai/provider';
 import { searchTranscripts } from '@/lib/vector-search';
 import { Message } from '@/lib/ai/types';
 import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
-import { checkRateLimit, RATE_LIMITS, getClientIdentifier } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { chatRequestSchema, parseRequest } from '@/lib/validations';
 
 export const runtime = 'nodejs';
@@ -15,7 +15,7 @@ const MAX_HISTORY_MESSAGES = 10;
 export async function POST(request: NextRequest) {
   // Rate limiting
   const clientId = getClientIdentifier(request);
-  const rateLimit = checkRateLimit(`chat:${clientId}`, RATE_LIMITS.chat);
+  const rateLimit = await checkRateLimit('chat', clientId);
 
   if (!rateLimit.allowed) {
     return new Response(
@@ -27,8 +27,7 @@ export async function POST(request: NextRequest) {
         status: 429,
         headers: {
           'Content-Type': 'application/json',
-          'X-RateLimit-Remaining': '0',
-          'X-RateLimit-Reset': String(rateLimit.resetAt),
+          ...rateLimitHeaders(rateLimit),
         },
       }
     );

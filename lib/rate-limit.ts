@@ -1,98 +1,158 @@
 /**
- * Simple in-memory rate limiter for serverless environments.
- * Note: This resets on cold starts. For production, use Redis/Upstash.
+ * Persistent rate limiter using Upstash Redis.
+ * Works across serverless cold starts and multiple instances.
  */
 
-interface RateLimitEntry {
-  count: number;
-  resetAt: number;
-}
+import { Redis } from '@upstash/redis';
+import { Ratelimit } from '@upstash/ratelimit';
 
-const store = new Map<string, RateLimitEntry>();
+// Initialize Redis client (uses UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN env vars)
+const redis = new Redis({
+  url: process.env.UPSTASH_REDIS_REST_URL || '',
+  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
+});
 
-// Clean up old entries periodically to prevent memory leaks
-const CLEANUP_INTERVAL = 60000; // 1 minute
-let lastCleanup = Date.now();
+// Check if Redis is configured
+const isRedisConfigured = !!(
+  process.env.UPSTASH_REDIS_REST_URL &&
+  process.env.UPSTASH_REDIS_REST_TOKEN
+);
 
-function cleanupOldEntries() {
-  const now = Date.now();
-  if (now - lastCleanup < CLEANUP_INTERVAL) return;
+// Create rate limiters for different endpoints
+const chatLimiter = isRedisConfigured
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(30, '1 m'), // 30 requests per minute
+      analytics: true,
+      prefix: 'ratelimit:chat',
+    })
+  : null;
 
-  lastCleanup = now;
-  for (const [key, entry] of store.entries()) {
-    if (entry.resetAt < now) {
-      store.delete(key);
-    }
-  }
-}
+const transcriptLimiter = isRedisConfigured
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(10, '1 m'), // 10 requests per minute
+      analytics: true,
+      prefix: 'ratelimit:transcript',
+    })
+  : null;
 
-interface RateLimitConfig {
-  maxRequests: number;  // Max requests per window
-  windowMs: number;     // Time window in milliseconds
-}
+const deleteLimiter = isRedisConfigured
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '1 m'), // 5 delete attempts per minute
+      analytics: true,
+      prefix: 'ratelimit:delete',
+    })
+  : null;
 
-interface RateLimitResult {
+const backfillLimiter = isRedisConfigured
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(2, '1 m'), // 2 backfills per minute
+      analytics: true,
+      prefix: 'ratelimit:backfill',
+    })
+  : null;
+
+// Limiter map for easy access
+const limiters = {
+  chat: chatLimiter,
+  transcript: transcriptLimiter,
+  delete: deleteLimiter,
+  backfill: backfillLimiter,
+};
+
+export type RateLimitType = keyof typeof limiters;
+
+export interface RateLimitResult {
   allowed: boolean;
   remaining: number;
   resetAt: number;
+  limit: number;
 }
 
-export function checkRateLimit(
-  identifier: string,
-  config: RateLimitConfig
-): RateLimitResult {
-  cleanupOldEntries();
+/**
+ * Check rate limit for a specific endpoint type and identifier.
+ * Falls back to allowing requests if Redis is not configured (dev mode).
+ */
+export async function checkRateLimit(
+  type: RateLimitType,
+  identifier: string
+): Promise<RateLimitResult> {
+  const limiter = limiters[type];
 
-  const now = Date.now();
-  const entry = store.get(identifier);
-
-  // No entry or expired - create new window
-  if (!entry || entry.resetAt < now) {
-    const newEntry: RateLimitEntry = {
-      count: 1,
-      resetAt: now + config.windowMs,
-    };
-    store.set(identifier, newEntry);
+  // If Redis not configured, allow all requests (development mode)
+  if (!limiter) {
+    console.warn(`Rate limiting disabled: Redis not configured. Type: ${type}`);
     return {
       allowed: true,
-      remaining: config.maxRequests - 1,
-      resetAt: newEntry.resetAt,
+      remaining: 999,
+      resetAt: Date.now() + 60000,
+      limit: 999,
     };
   }
 
-  // Within window - check limit
-  if (entry.count >= config.maxRequests) {
+  try {
+    const result = await limiter.limit(identifier);
     return {
-      allowed: false,
-      remaining: 0,
-      resetAt: entry.resetAt,
+      allowed: result.success,
+      remaining: result.remaining,
+      resetAt: result.reset,
+      limit: result.limit,
+    };
+  } catch (error) {
+    // On Redis error, fail open (allow request) but log
+    console.error('Rate limit check failed:', error);
+    return {
+      allowed: true,
+      remaining: 1,
+      resetAt: Date.now() + 60000,
+      limit: 30,
     };
   }
-
-  // Increment and allow
-  entry.count++;
-  return {
-    allowed: true,
-    remaining: config.maxRequests - entry.count,
-    resetAt: entry.resetAt,
-  };
 }
 
-// Predefined limits for different endpoints
-export const RATE_LIMITS = {
-  chat: { maxRequests: 30, windowMs: 60000 },       // 30 requests per minute
-  transcript: { maxRequests: 10, windowMs: 60000 }, // 10 transcripts per minute
-  backfill: { maxRequests: 2, windowMs: 60000 },    // 2 backfills per minute
-};
-
-// Helper to get client identifier from request
+/**
+ * Get client identifier from request headers.
+ * Validates IP format to prevent header spoofing.
+ */
 export function getClientIdentifier(request: Request): string {
-  // Try various headers for real IP
-  const forwarded = request.headers.get('x-forwarded-for');
-  const realIp = request.headers.get('x-real-ip');
+  // Vercel-specific header (most reliable on Vercel)
+  const vercelIp = request.headers.get('x-vercel-forwarded-for');
+
+  // Cloudflare header
   const cfIp = request.headers.get('cf-connecting-ip');
 
-  // Use first IP from forwarded chain, or fallback
-  const ip = forwarded?.split(',')[0]?.trim() || realIp || cfIp || 'anonymous';
-  return ip;
+  // Standard forwarded header (take first IP only)
+  const forwarded = request.headers.get('x-forwarded-for');
+  const forwardedIp = forwarded?.split(',')[0]?.trim();
+
+  // Real IP header
+  const realIp = request.headers.get('x-real-ip');
+
+  // Use most reliable source available
+  const ip = vercelIp || cfIp || forwardedIp || realIp || 'anonymous';
+
+  // Basic IP format validation (IPv4 or IPv6)
+  const ipv4Regex = /^(\d{1,3}\.){3}\d{1,3}$/;
+  const ipv6Regex = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+
+  if (ipv4Regex.test(ip) || ipv6Regex.test(ip) || ip === 'anonymous') {
+    return ip;
+  }
+
+  // If IP doesn't match expected format, use hash to prevent injection
+  return `invalid-${ip.slice(0, 32).replace(/[^a-zA-Z0-9]/g, '')}`;
+}
+
+/**
+ * Create rate limit response headers
+ */
+export function rateLimitHeaders(result: RateLimitResult): Record<string, string> {
+  return {
+    'X-RateLimit-Limit': String(result.limit),
+    'X-RateLimit-Remaining': String(result.remaining),
+    'X-RateLimit-Reset': String(result.resetAt),
+  };
 }

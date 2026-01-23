@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { del } from '@vercel/blob';
 import { timingSafeEqual } from 'crypto';
 import { deleteRequestSchema, parseRequest } from '@/lib/validations';
+import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 
 // Timing-safe string comparison to prevent timing attacks
 function secureCompare(a: string, b: string): boolean {
@@ -22,6 +23,21 @@ function secureCompare(a: string, b: string): boolean {
 }
 
 export async function POST(request: NextRequest) {
+  // Rate limiting to prevent brute force on admin key
+  const clientId = getClientIdentifier(request);
+  const rateLimit = await checkRateLimit('delete', clientId);
+
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      {
+        success: false,
+        error: 'För många försök. Vänta en stund.',
+        retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
+      },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
   try {
     const rawBody = await request.json();
     const parsed = parseRequest(deleteRequestSchema, rawBody);

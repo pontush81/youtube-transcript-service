@@ -63,11 +63,18 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
     // When specific videos are selected, don't apply similarity threshold
     // Users explicitly want results from these videos
     // Sanitize video IDs to prevent SQL injection
-    const sanitizedIds = videoIds.map(sanitizeVideoId).filter(id => id.length > 0);
+    const sanitizedIds = videoIds
+      .map(sanitizeVideoId)
+      .filter(id => id.length === 11); // Valid YouTube IDs are exactly 11 chars
+
     if (sanitizedIds.length === 0) {
       return [];
     }
-    const videoIdsArray = `{${sanitizedIds.join(',')}}`;
+
+    // Use proper parameterized array binding
+    // Convert to JSON array which PostgreSQL can parse safely
+    const videoIdsJson = JSON.stringify(sanitizedIds);
+
     results = await sql.query(
       `WITH ranked AS (
         SELECT
@@ -78,14 +85,14 @@ export async function searchTranscripts(params: SearchParams): Promise<SearchRes
           1 - (embedding <=> $1::vector) as similarity,
           ROW_NUMBER() OVER (PARTITION BY video_id ORDER BY embedding <=> $1::vector) as rn
         FROM transcript_chunks
-        WHERE video_id = ANY($3::text[])
+        WHERE video_id = ANY(SELECT jsonb_array_elements_text($3::jsonb))
       )
       SELECT video_id, video_title, content, timestamp_start, similarity
       FROM ranked
       WHERE rn <= $2
       ORDER BY similarity DESC
       LIMIT 20`,
-      [embeddingStr, maxChunksPerVideo, videoIdsArray]
+      [embeddingStr, maxChunksPerVideo, videoIdsJson]
     );
   }
 

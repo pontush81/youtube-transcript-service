@@ -4,6 +4,41 @@ import { z } from 'zod';
 const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}/;
 const YOUTUBE_ID_REGEX = /^[\w-]{11}$/;
 
+// Trusted blob storage domains (SSRF protection)
+const TRUSTED_BLOB_DOMAINS = [
+  'blob.vercel-storage.com',
+  'public.blob.vercel-storage.com',
+];
+
+/**
+ * Validate that a URL is from a trusted blob storage domain.
+ * Prevents SSRF attacks by ensuring we only fetch from expected sources.
+ */
+export function isValidBlobUrl(url: string): boolean {
+  try {
+    const parsed = new URL(url);
+
+    // Must be HTTPS
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+
+    // Must be from trusted domain
+    const hostname = parsed.hostname.toLowerCase();
+    return TRUSTED_BLOB_DOMAINS.some(
+      domain => hostname === domain || hostname.endsWith(`.${domain}`)
+    );
+  } catch {
+    return false;
+  }
+}
+
+// Custom Zod validator for blob URLs with SSRF protection
+const blobUrlSchema = z.string().url('Ogiltig URL').refine(
+  (url) => isValidBlobUrl(url),
+  { message: 'URL måste vara från en betrodd källa' }
+);
+
 export const youtubeUrlSchema = z.string().regex(YOUTUBE_URL_REGEX, 'Ogiltig YouTube URL');
 export const videoIdSchema = z.string().regex(YOUTUBE_ID_REGEX, 'Ogiltigt video-ID');
 
@@ -32,9 +67,9 @@ export const chatRequestSchema = z.object({
   mode: z.enum(['strict', 'hybrid']).default('strict'),
 });
 
-// Delete request
+// Delete request (uses SSRF-protected blob URL validation)
 export const deleteRequestSchema = z.object({
-  blobUrl: z.string().url('Ogiltig blob URL'),
+  blobUrl: blobUrlSchema,
   adminKey: z.string().min(1, 'Admin-nyckel krävs'),
 });
 
@@ -45,9 +80,9 @@ export const backfillRequestSchema = z.object({
   force: z.boolean().default(false),
 });
 
-// Format request (for formatting existing blob)
+// Format request (uses SSRF-protected blob URL validation)
 export const formatRequestSchema = z.object({
-  blobUrl: z.string().url('Ogiltig blob URL'),
+  blobUrl: blobUrlSchema,
   title: z.string().max(500).optional(),
 });
 

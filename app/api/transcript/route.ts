@@ -3,7 +3,7 @@ import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube'
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
-import { checkRateLimit, RATE_LIMITS, getClientIdentifier } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
@@ -12,7 +12,7 @@ import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 export async function POST(request: NextRequest) {
   // Rate limiting
   const clientId = getClientIdentifier(request);
-  const rateLimit = checkRateLimit(`transcript:${clientId}`, RATE_LIMITS.transcript);
+  const rateLimit = await checkRateLimit('transcript', clientId);
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
         error: 'För många förfrågningar. Vänta en stund.',
         retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
       },
-      { status: 429 }
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
     );
   }
 
