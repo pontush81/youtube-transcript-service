@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import Stripe from 'stripe';
-import { addCredits } from '@/lib/credits';
 import { activateSubscription, cancelSubscription, updateSubscriptionPeriod } from '@/lib/usage';
 
 // Lazy initialization to prevent build errors when env vars are missing
@@ -39,28 +38,6 @@ export async function POST(request: NextRequest) {
 
   // Log the event type for debugging
   console.log('Stripe webhook event:', event.type);
-
-  // Handle checkout.session.completed for one-time payments (legacy credits)
-  if (event.type === 'checkout.session.completed') {
-    const session = event.data.object as Stripe.Checkout.Session;
-
-    // Only process one-time payments (not subscriptions)
-    if (session.mode === 'payment') {
-      const { userId, credits } = session.metadata || {};
-
-      if (userId && credits) {
-        try {
-          const newBalance = await addCredits(userId, parseInt(credits, 10));
-          console.log(`Added ${credits} credits to user ${userId}. New balance: ${newBalance}`);
-        } catch (error) {
-          console.error('Failed to add credits:', error);
-          // Don't return error - Stripe will retry
-        }
-      } else {
-        console.error('Missing metadata in checkout session:', session.id);
-      }
-    }
-  }
 
   // Handle subscription created/updated
   if (event.type === 'customer.subscription.created' ||

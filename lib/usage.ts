@@ -30,7 +30,7 @@ export const FREE_LIMITS = {
 } as const;
 
 export const PRO_LIMITS = {
-  chatsPerMonth: 300,
+  chatsPerMonth: -1, // Unlimited
   transcriptsPerMonth: 100,
 } as const;
 
@@ -102,15 +102,15 @@ export async function getUsage(userId: string): Promise<UsageLimits> {
 
 /**
  * Check if user can use a specific feature.
- * Returns true if used < limit for the type.
+ * Returns true if limit is -1 (unlimited) or used < limit.
  */
 export async function canUse(userId: string, type: UsageType): Promise<boolean> {
   const usage = await getUsage(userId);
 
   if (type === 'chat') {
-    return usage.chats.used < usage.chats.limit;
+    return usage.chats.limit === -1 || usage.chats.used < usage.chats.limit;
   } else {
-    return usage.transcripts.used < usage.transcripts.limit;
+    return usage.transcripts.limit === -1 || usage.transcripts.used < usage.transcripts.limit;
   }
 }
 
