@@ -25,13 +25,13 @@ export interface UserPlan {
 // ==========================================
 
 export const FREE_LIMITS = {
-  chatsPerDay: 5,
+  chatsPerDay: 3,
   transcriptsPerDay: 3,
 } as const;
 
 export const PRO_LIMITS = {
-  chatsPerMonth: 1000,
-  transcriptsPerMonth: 200,
+  chatsPerMonth: 300,
+  transcriptsPerMonth: 100,
 } as const;
 
 // ==========================================

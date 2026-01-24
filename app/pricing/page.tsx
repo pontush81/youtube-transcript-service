@@ -115,7 +115,7 @@ function PricingContent() {
           <ul className="space-y-2 mb-6 text-sm">
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              5 AI-chats per dag
+              3 AI-chats per dag
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
@@ -150,11 +150,11 @@ function PricingContent() {
           <ul className="space-y-2 mb-6 text-sm">
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              1000 AI-chats per månad
+              300 AI-chats per månad
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              200 transkript per månad
+              100 transkript per månad
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>

@@ -7,24 +7,24 @@ Ersätt nuvarande credit-system med en enklare freemium + subscription-modell.
 ## Prismodell
 
 ### Free Tier
-- **5 chats per dag** (räknas per användare)
+- **3 chats per dag** (räknas per användare)
 - **3 transkript per dag**
 - Ingen registrering krävs för att testa
 - Registrering krävs för att spara transkript
 
 ### Pro (99 kr/månad)
-- **200 transkript per månad**
-- **1000 AI-chats per månad**
+- **100 transkript per månad**
+- **300 AI-chats per månad**
 - Sparade transkript i din kunskapsbas
 - Prioriterad support
 
 ### Varför dessa gränser?
 
 **Kostnadskalkyl:**
-- Supadata: $0.0004/transkript → 200 st = $0.08
-- OpenAI: ~$0.002/chat → 1000 st = $2.00
-- **Total maxkostnad per Pro-användare: ~$2.10/månad**
-- **Marginal vid 99 kr (~$9): ~77%**
+- Supadata: $0.0004/transkript → 100 st = $0.04
+- OpenAI: ~$0.003/chat → 300 st = $0.90
+- **Total maxkostnad per Pro-användare: ~$1/månad**
+- **Marginal vid 99 kr (~$9): ~89%**
 
 **Gränserna känns generösa** för normala användare men skyddar mot missbruk.
 
