@@ -112,6 +112,26 @@ function PricingContent() {
     }
   }
 
+  async function handleManageSubscription() {
+    try {
+      const res = await fetch('/api/billing-portal', {
+        method: 'POST',
+      });
+
+      if (res.ok) {
+        const { url } = await res.json();
+        if (url) {
+          window.location.href = url;
+        }
+      } else {
+        alert('Could not open billing portal. Please try again.');
+      }
+    } catch (error) {
+      console.error('Billing portal error:', error);
+      alert('Could not open billing portal. Please try again.');
+    }
+  }
+
   const isPro = data?.plan === 'pro';
 
   function getTierCTA(tier: PricingTier): string {
@@ -235,10 +255,18 @@ function PricingContent() {
                 </button>
               )}
 
-              {isCurrentPlan && data?.subscription?.renewsAt && (
-                <p className="text-center text-xs text-gray-400 mt-2">
-                  Renews {new Date(data.subscription.renewsAt).toLocaleDateString('en-US')}
-                </p>
+              {isCurrentPlan && tier.name === 'Pro' && data?.subscription?.renewsAt && (
+                <div className="text-center mt-2">
+                  <p className="text-xs text-gray-400">
+                    Renews {new Date(data.subscription.renewsAt).toLocaleDateString('en-US')}
+                  </p>
+                  <button
+                    onClick={handleManageSubscription}
+                    className="text-xs text-blue-600 hover:text-blue-800 underline mt-1"
+                  >
+                    Manage subscription
+                  </button>
+                </div>
               )}
             </div>
           );
