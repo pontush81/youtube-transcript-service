@@ -51,7 +51,6 @@ const tiers: PricingTier[] = [
     features: [
       '100 transcripts per month',
       'Unlimited AI chats',
-      'Priority support',
       'Everything in Free',
     ],
     badge: 'Recommended',
