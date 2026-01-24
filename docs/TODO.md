@@ -3,26 +3,26 @@
 ## Nästa steg
 
 ### Prioritet 1: Produktion-redo
-- [ ] **Upstash Redis** - Rate-limiting (gratis tier räcker)
-  - Skapa konto på https://upstash.com
-  - Lägg till `UPSTASH_REDIS_REST_URL` och `UPSTASH_REDIS_REST_TOKEN` i Vercel
-
+- [x] **Upstash Redis** - Rate-limiting (configured but optional)
 - [ ] **Clerk production keys** - Byt från development till production
-  - Clerk Dashboard → API Keys → Production
-  - Uppdatera `CLERK_SECRET_KEY` och `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` i Vercel
 
 ### Prioritet 2: UX-förbättringar
-- [ ] **CreditDisplay i navbar** - Visa credits-saldo i header
-  - Importera `CreditDisplay` från `components/CreditDisplay.tsx`
-  - Lägg till i `NavHeader.tsx`
-
-- [ ] **Favicon** - Lägg till favicon (404-fel i konsolen)
+- [x] **UsageDisplay i navbar** - Visa användning i header
+- [ ] **Favicon** - Lägg till favicon
 
 ### Prioritet 3: Nice-to-have
-- [ ] **Stripe test → live** - Byt till riktiga Stripe-nycklar när redo
+- [ ] **Stripe test → live** - Byt till riktiga Stripe-nycklar
 - [ ] **Ta bort debug-endpoint** - `/api/debug-transcript` är temporär
+- [ ] **Usage history page** - Visa detaljerad användningshistorik
 
 ---
+
+## Implementerat (2026-01-24)
+- ✅ Freemium + subscription pricing model
+- ✅ Usage tracking (daily for free, monthly for pro)
+- ✅ Stripe subscription checkout
+- ✅ UsageDisplay component
+- ✅ Pricing page
 
 ## Implementerat (2026-01-23)
 - ✅ Credit-system med PostgreSQL
