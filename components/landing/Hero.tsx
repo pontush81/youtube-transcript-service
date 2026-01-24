@@ -5,7 +5,7 @@ import { Play, ArrowRight } from 'lucide-react';
 
 export function Hero() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white py-20 sm:py-32">
+    <section className="relative overflow-hidden bg-gradient-to-b from-gray-50 to-white py-12 sm:py-16">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
         <div className="text-center">
           {/* Badge */}
