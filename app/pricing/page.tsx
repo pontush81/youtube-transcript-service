@@ -116,7 +116,6 @@ function PricingContent() {
 
   function getTierCTA(tier: PricingTier): string {
     if (tier.name === 'Free' && !isPro) return 'Current Plan';
-    if (tier.name === 'Free' && isPro) return 'Included';
     if (tier.name === 'Pro' && isPro) return 'Current Plan';
     if (!tier.available) return 'Coming Soon';
     return tier.cta;
@@ -213,21 +212,28 @@ function PricingContent() {
                 ))}
               </ul>
 
-              <button
-                onClick={() => handleSubscribe(tier.name)}
-                disabled={isTierDisabled(tier) || subscribing || loading}
-                className={`w-full py-3 rounded-lg font-semibold transition ${
-                  tier.highlight && !isCurrentPlan && tier.available
-                    ? 'bg-red-500 text-white hover:bg-red-600'
-                    : isCurrentPlan
-                    ? 'bg-gray-100 text-gray-500 cursor-default'
-                    : tier.available
-                    ? 'bg-gray-900 text-white hover:bg-gray-800'
-                    : 'bg-gray-100 text-gray-400 cursor-not-allowed'
-                }`}
-              >
-                {subscribing && tier.name === 'Pro' ? 'Loading...' : getTierCTA(tier)}
-              </button>
+              {/* Hide button for Free tier when user is Pro */}
+              {tier.name === 'Free' && isPro ? (
+                <p className="text-center text-sm text-gray-400 py-3">
+                  Included in your Pro plan
+                </p>
+              ) : (
+                <button
+                  onClick={() => handleSubscribe(tier.name)}
+                  disabled={isTierDisabled(tier) || subscribing || loading}
+                  className={`w-full py-3 rounded-lg font-semibold transition ${
+                    tier.highlight && !isCurrentPlan && tier.available
+                      ? 'bg-red-500 text-white hover:bg-red-600'
+                      : isCurrentPlan
+                      ? 'bg-gray-100 text-gray-500 cursor-default'
+                      : tier.available
+                      ? 'bg-gray-900 text-white hover:bg-gray-800'
+                      : 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                  }`}
+                >
+                  {subscribing && tier.name === 'Pro' ? 'Loading...' : getTierCTA(tier)}
+                </button>
+              )}
 
               {isCurrentPlan && data?.subscription?.renewsAt && (
                 <p className="text-center text-xs text-gray-400 mt-2">
