@@ -4,309 +4,20 @@
 
 **Goal:** Transform from Swedish hobby project to global SaaS product with high-converting landing page, proper pricing tiers, and growth infrastructure.
 
-**Architecture:** English-first with i18n foundation, new landing page with hero/social proof, 4-tier pricing (USD), onboarding flow, and SEO basics.
+**Architecture:** English-first (direct strings, no i18n overhead), new landing page with hero/product demo, 4-tier pricing (USD), onboarding flow, and SEO basics.
 
 **Tech Stack:** Next.js 16, Tailwind CSS v4, Clerk, Stripe, Vercel Analytics
+
+**Design decisions:**
+- **No i18n infrastructure** - YAGNI. Just write English strings directly.
+- **No fake testimonials** - Unethical. Use product demo + "Join beta" instead.
+- **Simple first** - Get it working, polish later.
 
 ---
 
 ## Phase 1: Foundation (Language + Branding)
 
-### Task 1: Create i18n Infrastructure
-
-**Files:**
-- Create: `lib/i18n/en.ts`
-- Create: `lib/i18n/index.ts`
-
-**Step 1: Create English translations file**
-
-```typescript
-// lib/i18n/en.ts
-export const en = {
-  // Navigation
-  nav: {
-    fetch: 'Fetch',
-    transcripts: 'Transcripts',
-    chat: 'Chat',
-    signIn: 'Sign in',
-    pricing: 'Pricing',
-  },
-
-  // Landing page
-  hero: {
-    title: 'Turn YouTube Videos Into Searchable Knowledge',
-    subtitle: 'Extract transcripts, chat with AI, and build your personal video knowledge base.',
-    cta: 'Start Free',
-    ctaSecondary: 'See How It Works',
-    trustedBy: 'Trusted by creators and researchers worldwide',
-  },
-
-  // Features
-  features: {
-    transcripts: {
-      title: 'Instant Transcripts',
-      description: 'Extract text from any YouTube video with captions in seconds.',
-    },
-    chat: {
-      title: 'AI-Powered Chat',
-      description: 'Ask questions across multiple videos. Get answers with timestamps.',
-    },
-    organize: {
-      title: 'Knowledge Base',
-      description: 'Save, organize, and search your video library.',
-    },
-  },
-
-  // Pricing
-  pricing: {
-    title: 'Simple, Transparent Pricing',
-    subtitle: 'Start free. Upgrade when you need more.',
-    monthly: '/month',
-    yearly: '/year',
-    save: 'Save 17%',
-    currentPlan: 'Current Plan',
-    upgrade: 'Upgrade',
-    mostPopular: 'Most Popular',
-    free: {
-      name: 'Free',
-      price: '$0',
-      features: [
-        '3 transcripts per day',
-        '3 AI chats per day',
-        'Save to knowledge base',
-        'Basic search',
-      ],
-    },
-    starter: {
-      name: 'Starter',
-      price: '$4.99',
-      features: [
-        '20 transcripts per month',
-        '100 AI chats per month',
-        'Everything in Free',
-        'Priority processing',
-      ],
-    },
-    pro: {
-      name: 'Pro',
-      price: '$14.99',
-      features: [
-        '100 transcripts per month',
-        'Unlimited AI chats',
-        'Everything in Starter',
-        'Priority support',
-        'Export to Markdown',
-      ],
-    },
-    team: {
-      name: 'Team',
-      price: '$34.99',
-      features: [
-        'Unlimited transcripts',
-        'Unlimited AI chats',
-        'Everything in Pro',
-        'API access',
-        'Team collaboration',
-      ],
-    },
-  },
-
-  // Forms
-  form: {
-    urlPlaceholder: 'https://youtube.com/watch?v=... or playlist URL',
-    fetchTranscript: 'Fetch Transcript',
-    fetching: 'Fetching...',
-    processing: 'Processing {count} videos...',
-    optional: 'Optional fields',
-    name: 'Your name',
-    tags: 'Tags (comma separated)',
-    notes: 'Notes',
-  },
-
-  // Transcript list
-  transcripts: {
-    title: 'Saved Transcripts',
-    search: 'Search title or channel...',
-    noResults: 'No transcripts found',
-    noTranscripts: 'No transcripts saved yet.',
-    fetchFirst: 'Fetch your first transcript',
-    edit: 'Edit',
-    cancel: 'Cancel',
-    delete: 'Delete',
-    selected: '{count} selected',
-    selectAll: 'All',
-    selectNone: 'None',
-    selectMine: 'Mine',
-    mine: 'Mine',
-    sortBy: {
-      recent: 'Recently added',
-      published: 'Publication date',
-      duration: 'Duration',
-      views: 'Views',
-      title: 'Title A-Z',
-    },
-    stats: '{count} transcripts from {channels} channels',
-  },
-
-  // Chat
-  chat: {
-    title: 'Chat',
-    selectVideos: 'Select videos',
-    clearChat: 'Clear chat',
-    clearConfirm: 'Clear chat?',
-    clearDescription: 'All messages will be deleted. This cannot be undone.',
-    askQuestion: 'Ask a question...',
-    send: 'Send (Enter)',
-    sendHint: 'Enter to send, Shift+Enter for new line',
-    emptyTitle: 'Ask a question about your videos',
-    emptySubtitle: 'Choose which transcripts to include in the search',
-    sources: 'Sources ({count}):',
-    showMore: 'Show {count} more',
-    showLess: 'Show fewer',
-    copy: 'Copy',
-    regenerate: 'Regenerate',
-    modes: {
-      strict: 'Video only',
-      strictDesc: 'Answers based only on your transcripts',
-      hybrid: 'Video + AI',
-      hybridDesc: 'Can use general knowledge and explain concepts',
-    },
-  },
-
-  // Success page
-  success: {
-    title: 'Transcript Created!',
-    readTranscript: 'Read Transcript',
-    preview: 'Preview',
-    fetchAnother: 'Fetch Another',
-    download: 'Download',
-    loading: 'Loading...',
-    backHome: 'Back to home',
-  },
-
-  // Errors
-  errors: {
-    generic: 'An error occurred',
-    tryAgain: 'Try again',
-    rateLimit: 'Too many requests. Please wait.',
-    dailyLimit: "You've reached your daily limit. Upgrade to Pro for more.",
-    invalidUrl: 'Invalid YouTube URL',
-    videoNotFound: 'Video not found or is private',
-    noTranscript: 'No transcript available. The video may not have captions.',
-    saveFailed: 'Could not save file. Try again.',
-    unauthorized: 'Unauthorized',
-    notFound: 'Not found',
-    deleteOwn: 'You can only delete your own transcripts',
-    adminRequired: 'Admin key required to delete others\' transcripts',
-  },
-
-  // Common
-  common: {
-    loading: 'Loading...',
-    cancel: 'Cancel',
-    close: 'Close',
-    confirm: 'Confirm',
-    back: 'Back',
-    next: 'Next',
-    save: 'Save',
-    views: '{count} views',
-    viewsK: '{count}K views',
-    viewsM: '{count}M views',
-  },
-
-  // Delete modal
-  deleteModal: {
-    title: 'Delete {count} transcripts',
-    titleSingle: 'Delete transcript',
-    confirm: 'Are you sure? This cannot be undone.',
-    adminKey: 'Admin key',
-    adminRequired: 'Required to delete others\' transcripts',
-    deleting: 'Deleting...',
-  },
-
-  // Usage display
-  usage: {
-    today: 'Today',
-    thisMonth: 'This month',
-    chats: 'chats',
-    transcripts: 'transcripts',
-  },
-
-  // Markdown generation
-  markdown: {
-    video: 'Video',
-    watchOnYouTube: 'Watch on YouTube',
-    created: 'Created',
-    submittedBy: 'Submitted by',
-    tags: 'Tags',
-    notes: 'Notes',
-    summary: 'Summary',
-    transcript: 'Transcript',
-  },
-
-  // Onboarding
-  onboarding: {
-    welcome: 'Welcome to TubeBase!',
-    step1Title: 'Fetch Transcripts',
-    step1Desc: 'Paste any YouTube URL to extract the transcript instantly.',
-    step2Title: 'Build Your Library',
-    step2Desc: 'Save transcripts to your personal knowledge base.',
-    step3Title: 'Chat with AI',
-    step3Desc: 'Ask questions across all your videos and get answers with timestamps.',
-    getStarted: 'Get Started',
-    skipTour: 'Skip tour',
-  },
-} as const;
-```
-
-**Step 2: Create i18n index with helper**
-
-```typescript
-// lib/i18n/index.ts
-import { en } from './en';
-
-export const translations = { en } as const;
-export type Locale = keyof typeof translations;
-export const defaultLocale: Locale = 'en';
-
-// Simple translation getter
-export function t(key: string): string {
-  const keys = key.split('.');
-  let value: unknown = translations[defaultLocale];
-
-  for (const k of keys) {
-    if (value && typeof value === 'object' && k in value) {
-      value = (value as Record<string, unknown>)[k];
-    } else {
-      return key; // Fallback to key if not found
-    }
-  }
-
-  return typeof value === 'string' ? value : key;
-}
-
-// Template string helper
-export function tpl(key: string, params: Record<string, string | number>): string {
-  let text = t(key);
-  for (const [param, value] of Object.entries(params)) {
-    text = text.replace(`{${param}}`, String(value));
-  }
-  return text;
-}
-
-export { en };
-```
-
-**Step 3: Commit**
-
-```bash
-git add lib/i18n/
-git commit -m "feat: add i18n infrastructure with English translations"
-```
-
----
-
-### Task 2: Update Layout and Metadata
+### Task 1: Update Layout and Metadata
 
 **Files:**
 - Modify: `app/layout.tsx`
@@ -344,7 +55,7 @@ git commit -m "feat: update to English metadata and lang attribute"
 - Create: `components/landing/Hero.tsx`
 - Create: `components/landing/Features.tsx`
 - Create: `components/landing/HowItWorks.tsx`
-- Create: `components/landing/SocialProof.tsx`
+- Create: `components/landing/BetaCTA.tsx`
 - Create: `components/landing/CTA.tsx`
 
 **Step 1: Create Hero component**
@@ -559,66 +270,44 @@ export function HowItWorks() {
 }
 ```
 
-**Step 4: Create SocialProof component**
+**Step 4: Create BetaCTA component (instead of fake testimonials)**
 
 ```tsx
-// components/landing/SocialProof.tsx
-import { Star } from 'lucide-react';
+// components/landing/BetaCTA.tsx
+import { Sparkles, Users } from 'lucide-react';
+import Link from 'next/link';
 
-const testimonials = [
-  {
-    quote: "I use this daily for research. Being able to chat across multiple video transcripts is a game-changer.",
-    author: "Sarah K.",
-    role: "PhD Researcher",
-    avatar: "SK",
-  },
-  {
-    quote: "Finally, a way to actually learn from YouTube instead of just watching. The AI chat is incredibly useful.",
-    author: "Marcus L.",
-    role: "Content Creator",
-    avatar: "ML",
-  },
-  {
-    quote: "Saved me hours of rewatching videos. I just ask questions and get answers with timestamps.",
-    author: "Anna T.",
-    role: "Online Course Creator",
-    avatar: "AT",
-  },
-];
-
-export function SocialProof() {
+export function BetaCTA() {
   return (
     <section className="py-20 sm:py-32 bg-white">
       <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
-        <div className="text-center">
-          <div className="flex items-center justify-center gap-1">
-            {[...Array(5)].map((_, i) => (
-              <Star key={i} className="h-6 w-6 fill-yellow-400 text-yellow-400" />
-            ))}
-          </div>
-          <p className="mt-2 text-lg font-semibold text-gray-900">
-            Loved by researchers, creators, and learners
-          </p>
-        </div>
-
-        <div className="mt-16 grid gap-8 sm:grid-cols-2 lg:grid-cols-3">
-          {testimonials.map((testimonial) => (
-            <div
-              key={testimonial.author}
-              className="rounded-2xl bg-gray-50 p-8"
-            >
-              <p className="text-gray-700">&ldquo;{testimonial.quote}&rdquo;</p>
-              <div className="mt-6 flex items-center gap-4">
-                <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-100 text-sm font-semibold text-red-600">
-                  {testimonial.avatar}
-                </div>
-                <div>
-                  <p className="font-semibold text-gray-900">{testimonial.author}</p>
-                  <p className="text-sm text-gray-500">{testimonial.role}</p>
-                </div>
-              </div>
+        <div className="rounded-2xl bg-gradient-to-r from-red-50 to-orange-50 p-8 sm:p-12">
+          <div className="flex flex-col items-center text-center">
+            <div className="inline-flex items-center gap-2 rounded-full bg-red-100 px-4 py-2 text-sm font-medium text-red-700">
+              <Sparkles className="h-4 w-4" />
+              Early Access
             </div>
-          ))}
+
+            <h2 className="mt-6 text-3xl font-bold tracking-tight text-gray-900">
+              Join the beta
+            </h2>
+
+            <p className="mt-4 max-w-2xl text-lg text-gray-600">
+              We&apos;re building the best way to learn from YouTube.
+              Start free and help shape the product.
+            </p>
+
+            <div className="mt-8 flex flex-col items-center gap-4 sm:flex-row">
+              <Link
+                href="/sign-up"
+                className="inline-flex items-center gap-2 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white transition hover:bg-red-700"
+              >
+                <Users className="h-5 w-5" />
+                Get Early Access
+              </Link>
+              <span className="text-sm text-gray-500">Free forever for early users</span>
+            </div>
+          </div>
         </div>
       </div>
     </section>
@@ -665,7 +354,7 @@ export function CTA() {
 import { Hero } from '@/components/landing/Hero';
 import { Features } from '@/components/landing/Features';
 import { HowItWorks } from '@/components/landing/HowItWorks';
-import { SocialProof } from '@/components/landing/SocialProof';
+import { BetaCTA } from '@/components/landing/BetaCTA';
 import { CTA } from '@/components/landing/CTA';
 
 export default function Home() {
@@ -674,7 +363,7 @@ export default function Home() {
       <Hero />
       <Features />
       <HowItWorks />
-      <SocialProof />
+      <BetaCTA />
       <CTA />
     </main>
   );
