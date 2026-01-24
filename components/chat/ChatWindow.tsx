@@ -75,7 +75,7 @@ export function ChatWindow() {
           {/* Drawer */}
           <div className="absolute left-0 top-0 bottom-0 w-80 max-w-[85vw] bg-white shadow-xl">
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
-              <h2 className="font-semibold text-gray-900">Välj videor</h2>
+              <h2 className="font-semibold text-gray-900">Select videos</h2>
               <button
                 onClick={() => setShowMobileSelector(false)}
                 className="p-2 text-gray-500 hover:text-gray-700"
@@ -117,7 +117,7 @@ export function ChatWindow() {
               <button
                 onClick={() => setShowClearConfirm(true)}
                 className="p-2 text-gray-400 hover:text-gray-600 rounded-lg hover:bg-gray-100 transition-colors"
-                title="Rensa chatt"
+                title="Clear chat"
               >
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
@@ -146,17 +146,17 @@ export function ChatWindow() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50">
           <div className="bg-white rounded-xl p-6 max-w-sm w-full shadow-xl">
             <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Rensa chatten?
+              Clear chat?
             </h3>
             <p className="text-gray-600 mb-4">
-              Alla meddelanden kommer att tas bort. Detta kan inte ångras.
+              All messages will be deleted. This cannot be undone.
             </p>
             <div className="flex gap-3 justify-end">
               <button
                 onClick={() => setShowClearConfirm(false)}
                 className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
               >
-                Avbryt
+                Cancel
               </button>
               <button
                 onClick={() => {
@@ -165,7 +165,7 @@ export function ChatWindow() {
                 }}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium"
               >
-                Rensa
+                Clear
               </button>
             </div>
           </div>

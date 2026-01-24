@@ -48,7 +48,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
           value={input}
           onChange={(e) => setInput(e.target.value)}
           onKeyDown={handleKeyDown}
-          placeholder="Ställ en fråga..."
+          placeholder="Ask a question..."
           disabled={disabled}
           rows={1}
           className="flex-1 px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none resize-none disabled:bg-gray-50"
@@ -57,7 +57,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
           type="submit"
           disabled={disabled || !input.trim()}
           className="px-3 sm:px-4 py-2.5 sm:py-3 bg-blue-600 text-white rounded-xl hover:bg-blue-700 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors flex-shrink-0"
-          title="Skicka (Enter)"
+          title="Send (Enter)"
         >
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -70,7 +70,7 @@ export function MessageInput({ onSend, disabled }: MessageInputProps) {
         </button>
       </div>
       <p className="text-xs text-gray-400 mt-1.5 hidden sm:block">
-        Enter för att skicka, Shift+Enter för ny rad
+        Press Enter to send, Shift+Enter for new line
       </p>
     </form>
   );

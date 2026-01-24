@@ -24,7 +24,7 @@ export default function DownloadButton({ url, filename }: DownloadButtonProps) {
           clipRule="evenodd"
         />
       </svg>
-      Ladda ner Markdown
+      Download Markdown
     </a>
   );
 }

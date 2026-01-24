@@ -24,7 +24,7 @@ function CopyButton({ text }: { text: string }) {
     <button
       onClick={handleCopy}
       className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700"
-      title="Kopiera"
+      title="Copy"
     >
       {copied ? (
         <svg className="w-4 h-4 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -44,8 +44,8 @@ export function MessageList({ messages, isLoading, onRegenerate }: MessageListPr
     return (
       <div className="flex-1 flex items-center justify-center text-gray-500">
         <div className="text-center">
-          <p className="text-lg mb-2">Ställ en fråga om dina videor</p>
-          <p className="text-sm">Välj vilka transkript som ska ingå i sökningen</p>
+          <p className="text-lg mb-2">Ask a question about your videos</p>
+          <p className="text-sm">Select which transcripts to include in the search</p>
         </div>
       </div>
     );
@@ -99,7 +99,7 @@ export function MessageList({ messages, isLoading, onRegenerate }: MessageListPr
                   <button
                     onClick={() => onRegenerate(message.id)}
                     className="p-1.5 rounded hover:bg-gray-200 transition-colors text-gray-500 hover:text-gray-700"
-                    title="Generera nytt svar"
+                    title="Regenerate response"
                   >
                     <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />

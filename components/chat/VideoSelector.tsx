@@ -41,12 +41,12 @@ export function VideoSelector({ videos, selectedVideos, onChange }: VideoSelecto
   return (
     <div className="h-full flex flex-col border-r border-gray-200">
       <div className="p-4 border-b border-gray-200">
-        <h2 className="font-medium text-gray-900 mb-3">Transkript</h2>
+        <h2 className="font-medium text-gray-900 mb-3">Transcripts</h2>
         <input
           type="text"
           value={searchQuery}
           onChange={(e) => setSearchQuery(e.target.value)}
-          placeholder="Sök videor..."
+          placeholder="Search videos..."
           className="w-full px-3 py-2 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
         />
       </div>
@@ -60,7 +60,7 @@ export function VideoSelector({ videos, selectedVideos, onChange }: VideoSelecto
             className="w-5 h-5 flex-shrink-0 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
           />
           <span className="text-sm font-medium">
-            Alla ({videos.length})
+            All ({videos.length})
           </span>
         </label>
       </div>
@@ -84,7 +84,7 @@ export function VideoSelector({ videos, selectedVideos, onChange }: VideoSelecto
         ))}
 
         {filteredVideos.length === 0 && (
-          <p className="text-sm text-gray-500 p-2">Inga videor hittades</p>
+          <p className="text-sm text-gray-500 p-2">No videos found</p>
         )}
       </div>
     </div>

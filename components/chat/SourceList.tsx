@@ -35,7 +35,7 @@ export function SourceList({ sources }: SourceListProps) {
   return (
     <div className="mt-3 pt-3 border-t border-gray-200">
       <p className="text-xs font-medium text-gray-500 mb-2">
-        Källor ({sources.length}):
+        Sources ({sources.length}):
       </p>
       <ul className="space-y-1">
         {visibleSources.map((source, index) => (
@@ -54,7 +54,7 @@ export function SourceList({ sources }: SourceListProps) {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-xs text-gray-500 hover:text-red-600 flex items-center gap-0.5 flex-shrink-0"
-                title="Öppna i YouTube vid denna tidpunkt"
+                title="Open in YouTube at this time"
               >
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="currentColor">
                   <path d="M19.615 3.184c-3.604-.246-11.631-.245-15.23 0-3.897.266-4.356 2.62-4.385 8.816.029 6.185.484 8.549 4.385 8.816 3.6.245 11.626.246 15.23 0 3.897-.266 4.356-2.62 4.385-8.816-.029-6.185-.484-8.549-4.385-8.816zm-10.615 12.816v-8l8 3.993-8 4.007z" />
@@ -78,7 +78,7 @@ export function SourceList({ sources }: SourceListProps) {
           >
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
           </svg>
-          {isExpanded ? 'Visa färre' : `Visa ${hiddenCount} till`}
+          {isExpanded ? 'Show fewer' : `Show ${hiddenCount} more`}
         </button>
       )}
     </div>

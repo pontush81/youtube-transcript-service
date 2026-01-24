@@ -63,7 +63,7 @@ export default function TranscriptForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Kunde inte hämta spellistinformation');
+        setError(data.error || 'Could not fetch playlist information');
         setLoadingPlaylist(false);
         return;
       }
@@ -72,7 +72,7 @@ export default function TranscriptForm() {
       // Select all videos by default
       setSelectedVideos(new Set(data.videos.map((v: PlaylistVideo) => v.videoId)));
     } catch {
-      setError('Kunde inte ansluta till servern');
+      setError('Could not connect to server');
     } finally {
       setLoadingPlaylist(false);
     }
@@ -120,7 +120,7 @@ export default function TranscriptForm() {
   async function handlePlaylistSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (selectedVideos.size === 0) {
-      setError('Välj minst en video');
+      setError('Select at least one video');
       return;
     }
 
@@ -143,14 +143,14 @@ export default function TranscriptForm() {
       const data = await response.json();
 
       if (!response.ok) {
-        setError(data.error || 'Ett fel uppstod');
+        setError(data.error || 'An error occurred');
         setProcessingPlaylist(false);
         return;
       }
 
       setProcessResults(data.results);
     } catch {
-      setError('Kunde inte ansluta till servern');
+      setError('Could not connect to server');
     } finally {
       setProcessingPlaylist(false);
     }
@@ -184,7 +184,7 @@ export default function TranscriptForm() {
       const data = await response.json();
 
       if (!data.success) {
-        setError(data.error || 'Ett fel uppstod');
+        setError(data.error || 'An error occurred');
         setIsLoading(false);
         return;
       }
@@ -198,7 +198,7 @@ export default function TranscriptForm() {
 
       router.push(`/success?${params.toString()}`);
     } catch {
-      setError('Kunde inte ansluta till servern');
+      setError('Could not connect to server');
       setIsLoading(false);
     }
   }
@@ -217,7 +217,7 @@ export default function TranscriptForm() {
           id="url"
           value={url}
           onChange={(e) => setUrl(e.target.value)}
-          placeholder="https://www.youtube.com/watch?v=... eller spellista"
+          placeholder="https://www.youtube.com/watch?v=... or playlist"
           required
           className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all"
         />
@@ -226,7 +226,7 @@ export default function TranscriptForm() {
             <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
             </svg>
-            Spellista upptäckt - laddar...
+            Playlist detected - loading...
           </p>
         )}
       </div>
@@ -239,7 +239,7 @@ export default function TranscriptForm() {
               <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
               <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
             </svg>
-            <span className="text-blue-700">Hämtar spellistinformation...</span>
+            <span className="text-blue-700">Fetching playlist information...</span>
           </div>
         </div>
       )}
@@ -260,7 +260,7 @@ export default function TranscriptForm() {
               <div className="flex-1 min-w-0">
                 <h3 className="font-medium text-gray-900 truncate">{playlistInfo.title}</h3>
                 <p className="text-sm text-gray-500">{playlistInfo.channelTitle}</p>
-                <p className="text-sm text-gray-500">{playlistInfo.videoCount} videor</p>
+                <p className="text-sm text-gray-500">{playlistInfo.videoCount} videos</p>
               </div>
             </div>
           </div>
@@ -268,7 +268,7 @@ export default function TranscriptForm() {
           {/* Selection controls */}
           <div className="p-3 bg-white border-b border-gray-200 flex items-center justify-between">
             <span className="text-sm text-gray-600">
-              {selectedVideos.size} av {playlistInfo.videos.length} valda
+              {selectedVideos.size} of {playlistInfo.videos.length} selected
             </span>
             <div className="flex gap-2">
               <button
@@ -276,7 +276,7 @@ export default function TranscriptForm() {
                 onClick={selectAll}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Välj alla
+                Select all
               </button>
               <span className="text-gray-300">|</span>
               <button
@@ -284,7 +284,7 @@ export default function TranscriptForm() {
                 onClick={selectNone}
                 className="text-sm text-blue-600 hover:text-blue-800"
               >
-                Avmarkera alla
+                Deselect all
               </button>
             </div>
           </div>
@@ -318,7 +318,7 @@ export default function TranscriptForm() {
           {selectedVideos.size > 20 && (
             <div className="p-3 bg-yellow-50 border-t border-yellow-200">
               <p className="text-sm text-yellow-700">
-                Max 20 videor åt gången. Välj färre videor.
+                Maximum 20 videos at a time. Please select fewer videos.
               </p>
             </div>
           )}
@@ -329,9 +329,9 @@ export default function TranscriptForm() {
       {processResults && (
         <div className="border border-gray-200 rounded-lg overflow-hidden">
           <div className="bg-gray-50 p-4 border-b border-gray-200">
-            <h3 className="font-medium text-gray-900">Resultat</h3>
+            <h3 className="font-medium text-gray-900">Results</h3>
             <p className="text-sm text-gray-500">
-              {processResults.filter(r => r.success).length} av {processResults.length} lyckades
+              {processResults.filter(r => r.success).length} of {processResults.length} succeeded
             </p>
           </div>
           <div className="max-h-64 overflow-y-auto">
@@ -362,7 +362,7 @@ export default function TranscriptForm() {
                     href={`/transcripts/${result.videoId}`}
                     className="text-sm text-blue-600 hover:text-blue-800 flex-shrink-0"
                   >
-                    Visa
+                    View
                   </a>
                 )}
               </div>
@@ -378,7 +378,7 @@ export default function TranscriptForm() {
               }}
               className="text-sm text-blue-600 hover:text-blue-800"
             >
-              Transkribera fler videor
+              Transcribe more videos
             </button>
           </div>
         </div>
@@ -400,7 +400,7 @@ export default function TranscriptForm() {
             >
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
             </svg>
-            Valfria fält (namn, taggar, anteckningar)
+            Optional fields (name, tags, notes)
           </button>
 
           {showOptional && (
@@ -410,7 +410,7 @@ export default function TranscriptForm() {
                   htmlFor="submitter"
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
-                  Ditt namn
+                  Your name
                 </label>
                 <input
                   type="text"
@@ -427,7 +427,7 @@ export default function TranscriptForm() {
                   htmlFor="tags"
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
-                  Taggar (separera med komma)
+                  Tags (separate with comma)
                 </label>
                 <input
                   type="text"
@@ -444,13 +444,13 @@ export default function TranscriptForm() {
                   htmlFor="notes"
                   className="block text-sm font-medium text-gray-700 mb-1.5"
                 >
-                  Anteckningar
+                  Notes
                 </label>
                 <textarea
                   id="notes"
                   value={notes}
                   onChange={(e) => setNotes(e.target.value)}
-                  placeholder="Egna anteckningar om videon..."
+                  placeholder="Your notes about the video..."
                   rows={2}
                   className="w-full px-3 sm:px-4 py-2.5 sm:py-3 text-sm sm:text-base border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none transition-all resize-none"
                 />
@@ -467,7 +467,7 @@ export default function TranscriptForm() {
             htmlFor="submitter-playlist"
             className="block text-sm font-medium text-gray-700 mb-1.5"
           >
-            Ditt namn (valfritt)
+            Your name (optional)
           </label>
           <input
             type="text"
@@ -516,13 +516,13 @@ export default function TranscriptForm() {
                 />
               </svg>
               {processingPlaylist
-                ? `Bearbetar ${selectedVideos.size} videor...`
-                : 'Hämtar transkript...'}
+                ? `Processing ${selectedVideos.size} videos...`
+                : 'Fetching transcript...'}
             </>
           ) : playlistInfo ? (
-            `Transkribera ${selectedVideos.size} video${selectedVideos.size !== 1 ? 'r' : ''}`
+            `Transcribe ${selectedVideos.size} video${selectedVideos.size !== 1 ? 's' : ''}`
           ) : (
-            'Hämta transkript'
+            'Fetch Transcript'
           )}
         </button>
       )}
