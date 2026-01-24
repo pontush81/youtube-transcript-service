@@ -6,8 +6,14 @@ import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "YouTube Transcript Service",
-  description: "Hämta transkript från YouTube-videor och ladda ner som Markdown",
+  title: "TubeBase - Turn YouTube Videos Into Searchable Knowledge",
+  description: "Extract transcripts from YouTube videos, chat with AI, and build your personal video knowledge base. Free to start.",
+  keywords: ["youtube transcript", "video to text", "ai chat", "knowledge base", "youtube captions", "video transcription"],
+  openGraph: {
+    title: "TubeBase - YouTube Knowledge Base",
+    description: "Extract transcripts, chat with AI, build your video knowledge base.",
+    type: "website",
+  },
 };
 
 export default function RootLayout({
@@ -16,7 +22,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="sv">
+    <html lang="en">
       <body className="min-h-screen bg-gray-50 text-gray-900 antialiased">
         <Providers>
           <ToastProvider>
