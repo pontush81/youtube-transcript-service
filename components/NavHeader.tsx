@@ -3,6 +3,7 @@
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useUser, SignedIn, SignedOut, UserButton } from '@clerk/nextjs';
+import { UsageDisplay } from '@/components/UsageDisplay';
 
 interface NavItem {
   href: string;
@@ -87,14 +88,17 @@ export function NavHeader() {
               ) : (
                 <>
                   <SignedIn>
-                    <UserButton
-                      afterSignOutUrl="/"
-                      appearance={{
-                        elements: {
-                          avatarBox: 'w-8 h-8',
-                        }
-                      }}
-                    />
+                    <div className="flex items-center gap-3">
+                      <UsageDisplay />
+                      <UserButton
+                        afterSignOutUrl="/"
+                        appearance={{
+                          elements: {
+                            avatarBox: 'w-8 h-8',
+                          }
+                        }}
+                      />
+                    </div>
                   </SignedIn>
                   <SignedOut>
                     <Link
