@@ -43,7 +43,7 @@ export function Hero() {
               className="inline-flex items-center gap-2 rounded-lg border border-gray-300 bg-white px-8 py-4 text-lg font-semibold text-gray-700 transition hover:bg-gray-50"
             >
               <Play className="h-5 w-5" />
-              See How It Works
+              How it works
             </Link>
           </div>
         </div>
