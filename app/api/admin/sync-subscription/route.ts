@@ -1,13 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 
-// Admin endpoint to manually sync a subscription from Stripe data
+// Admin endpoint to manually sync or delete subscriptions
 // Protected by admin key header
 
-export async function POST(request: NextRequest) {
-  // Verify admin key
+function verifyAdmin(request: NextRequest): boolean {
   const adminKey = request.headers.get('x-admin-key');
-  if (!adminKey || adminKey !== process.env.ADMIN_KEY) {
+  return adminKey === process.env.ADMIN_KEY;
+}
+
+// DELETE - Clear all subscriptions or specific user's subscription
+export async function DELETE(request: NextRequest) {
+  if (!verifyAdmin(request)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+
+  try {
+    const { searchParams } = new URL(request.url);
+    const userId = searchParams.get('userId');
+
+    if (userId) {
+      await sql`DELETE FROM subscriptions WHERE user_id = ${userId}`;
+      return NextResponse.json({ success: true, message: `Deleted subscription for ${userId}` });
+    } else {
+      const result = await sql`DELETE FROM subscriptions`;
+      return NextResponse.json({ success: true, message: `Deleted all subscriptions`, count: result.rowCount });
+    }
+  } catch (error) {
+    console.error('Failed to delete subscription:', error);
+    return NextResponse.json({ error: 'Failed to delete subscription' }, { status: 500 });
+  }
+}
+
+// POST - Sync subscription
+export async function POST(request: NextRequest) {
+  if (!verifyAdmin(request)) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
   }
 
