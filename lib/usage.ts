@@ -232,3 +232,15 @@ export async function updateSubscriptionPeriod(
     WHERE stripe_subscription_id = ${stripeSubscriptionId}
   `;
 }
+
+/**
+ * Get usage warning status based on current usage vs limit.
+ * Returns 'ok' (< 80%), 'warning' (80-99%), or 'critical' (100%)
+ */
+export function getUsageWarning(used: number, limit: number): 'ok' | 'warning' | 'critical' {
+  if (limit === -1) return 'ok'; // Unlimited
+  const percentage = (used / limit) * 100;
+  if (percentage >= 100) return 'critical';
+  if (percentage >= 80) return 'warning';
+  return 'ok';
+}
