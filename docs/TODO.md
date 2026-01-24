@@ -12,6 +12,10 @@
 
 ### Prioritet 3: Nice-to-have
 - [ ] **Stripe test → live** - Byt till riktiga Stripe-nycklar
+  - `STRIPE_SECRET_KEY` → `sk_live_...`
+  - `NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY` → `pk_live_...`
+  - `STRIPE_WEBHOOK_SECRET` → Skapa ny webhook i live-läge och använd den secreten (måste matcha rätt miljö)
+  - `STRIPE_PRICE_PRO_SUBSCRIPTION` → Skapa produkt i live-läge
 - [ ] **Ta bort debug-endpoint** - `/api/debug-transcript` är temporär
 - [ ] **Usage history page** - Visa detaljerad användningshistorik
 
