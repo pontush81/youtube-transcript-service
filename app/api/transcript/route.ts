@@ -21,7 +21,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'För många förfrågningar. Vänta en stund.',
+        error: 'Too many requests. Please wait.',
         retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
       },
       { status: 429, headers: rateLimitHeaders(rateLimit) }
@@ -44,7 +44,7 @@ export async function POST(request: NextRequest) {
 
     if (!videoId) {
       return NextResponse.json(
-        { success: false, error: 'Ogiltig YouTube URL' },
+        { success: false, error: 'Invalid YouTube URL' },
         { status: 400 }
       );
     }
@@ -54,7 +54,7 @@ export async function POST(request: NextRequest) {
       title = await fetchVideoTitle(videoId);
     } catch {
       return NextResponse.json(
-        { success: false, error: 'Videon kunde inte hittas eller är privat' },
+        { success: false, error: 'Video not found or is private' },
         { status: 404 }
       );
     }
@@ -66,7 +66,7 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         {
           success: false,
-          error: 'Transkript saknas för denna video. Videon har förmodligen inga captions.',
+          error: 'No transcript available for this video. The video likely has no captions.',
         },
         { status: 404 }
       );
@@ -87,7 +87,7 @@ export async function POST(request: NextRequest) {
       downloadUrl = await saveToBlob(videoId, markdown);
     } catch {
       return NextResponse.json(
-        { success: false, error: 'Kunde inte spara filen. Försök igen.' },
+        { success: false, error: 'Could not save the file. Please try again.' },
         { status: 500 }
       );
     }
@@ -148,7 +148,7 @@ export async function POST(request: NextRequest) {
     });
   } catch {
     return NextResponse.json(
-      { success: false, error: 'Ett oväntat fel uppstod' },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     );
   }

@@ -52,7 +52,7 @@ interface UseTranscriptsOptions {
 const fetcher = async (url: string): Promise<TranscriptsResponse> => {
   const response = await fetch(url);
   if (!response.ok) {
-    throw new Error('Kunde inte hämta transkript');
+    throw new Error('Could not fetch transcripts');
   }
   return response.json();
 };
@@ -114,10 +114,10 @@ export function formatViewCount(count: number | undefined): string {
   if (!count) return '';
 
   if (count >= 1_000_000) {
-    return `${(count / 1_000_000).toFixed(1)}M visningar`;
+    return `${(count / 1_000_000).toFixed(1)}M views`;
   }
   if (count >= 1_000) {
-    return `${(count / 1_000).toFixed(1)}K visningar`;
+    return `${(count / 1_000).toFixed(1)}K views`;
   }
-  return `${count} visningar`;
+  return `${count} views`;
 }

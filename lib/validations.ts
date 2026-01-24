@@ -34,13 +34,13 @@ export function isValidBlobUrl(url: string): boolean {
 }
 
 // Custom Zod validator for blob URLs with SSRF protection
-const blobUrlSchema = z.string().url('Ogiltig URL').refine(
+const blobUrlSchema = z.string().url('Invalid URL').refine(
   (url) => isValidBlobUrl(url),
-  { message: 'URL måste vara från en betrodd källa' }
+  { message: 'URL must be from a trusted source' }
 );
 
-export const youtubeUrlSchema = z.string().regex(YOUTUBE_URL_REGEX, 'Ogiltig YouTube URL');
-export const videoIdSchema = z.string().regex(YOUTUBE_ID_REGEX, 'Ogiltigt video-ID');
+export const youtubeUrlSchema = z.string().regex(YOUTUBE_URL_REGEX, 'Invalid YouTube URL');
+export const videoIdSchema = z.string().regex(YOUTUBE_ID_REGEX, 'Invalid video ID');
 
 // Transcript submission
 export const transcriptSubmitSchema = z.object({
@@ -58,11 +58,11 @@ export const chatMessageSchema = z.object({
 
 // Chat request
 export const chatRequestSchema = z.object({
-  message: z.string().min(1, 'Meddelande krävs').max(10000),
+  message: z.string().min(1, 'Message required').max(10000),
   conversationHistory: z.array(chatMessageSchema).max(50).default([]),
   selectedVideos: z.union([
     z.literal('all'),
-    z.array(videoIdSchema).min(1, 'Välj minst en video').max(100),
+    z.array(videoIdSchema).min(1, 'Select at least one video').max(100),
   ]),
   mode: z.enum(['strict', 'hybrid']).default('strict'),
 });
@@ -70,12 +70,12 @@ export const chatRequestSchema = z.object({
 // Delete request (uses SSRF-protected blob URL validation)
 export const deleteRequestSchema = z.object({
   blobUrl: blobUrlSchema,
-  adminKey: z.string().min(1, 'Admin-nyckel krävs'),
+  adminKey: z.string().min(1, 'Admin key required'),
 });
 
 // Embedding backfill
 export const backfillRequestSchema = z.object({
-  adminKey: z.string().min(1, 'Admin-nyckel krävs'),
+  adminKey: z.string().min(1, 'Admin key required'),
   videoId: videoIdSchema.optional(),
   force: z.boolean().default(false),
 });
@@ -99,6 +99,6 @@ export function parseRequest<T>(
   const firstIssue = result.error.issues[0];
   return {
     success: false,
-    error: firstIssue?.message || 'Ogiltig data',
+    error: firstIssue?.message || 'Invalid data',
   };
 }

@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
 
   if (!apiKey) {
     return NextResponse.json(
-      { success: false, error: 'OpenAI API-nyckel saknas' },
+      { success: false, error: 'OpenAI API key is missing' },
       { status: 500 }
     );
   }
@@ -26,7 +26,7 @@ export async function POST(request: NextRequest) {
 
     if (!blobUrl) {
       return NextResponse.json(
-        { success: false, error: 'Blob URL krävs' },
+        { success: false, error: 'Blob URL is required' },
         { status: 400 }
       );
     }
@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     // SSRF protection: validate blob URL
     if (!isValidBlobUrl(blobUrl)) {
       return NextResponse.json(
-        { success: false, error: 'Ogiltig blob URL' },
+        { success: false, error: 'Invalid blob URL' },
         { status: 400 }
       );
     }
@@ -43,7 +43,7 @@ export async function POST(request: NextRequest) {
     const contentResponse = await fetch(blobUrl);
     if (!contentResponse.ok) {
       return NextResponse.json(
-        { success: false, error: 'Kunde inte hämta transkript' },
+        { success: false, error: 'Could not fetch transcript' },
         { status: 404 }
       );
     }
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     // Kolla om redan har sammanfattning
     if (content.includes('## Sammanfattning') || content.includes('## Summary')) {
       return NextResponse.json(
-        { success: false, error: 'Transkriptet har redan en sammanfattning' },
+        { success: false, error: 'Transcript already has a summary' },
         { status: 400 }
       );
     }
@@ -62,7 +62,7 @@ export async function POST(request: NextRequest) {
     const parts = content.split('---');
     if (parts.length < 2) {
       return NextResponse.json(
-        { success: false, error: 'Ogiltigt transkript-format' },
+        { success: false, error: 'Invalid transcript format' },
         { status: 400 }
       );
     }
@@ -109,7 +109,7 @@ RULES:
     if (!response.ok) {
       console.error('OpenAI API error:', response.status);
       return NextResponse.json(
-        { success: false, error: 'AI-sammanfattning misslyckades' },
+        { success: false, error: 'AI summary generation failed' },
         { status: 500 }
       );
     }
@@ -119,7 +119,7 @@ RULES:
 
     if (!summary) {
       return NextResponse.json(
-        { success: false, error: 'Ingen sammanfattning genererades' },
+        { success: false, error: 'No summary was generated' },
         { status: 500 }
       );
     }
@@ -145,12 +145,12 @@ RULES:
     return NextResponse.json({
       success: true,
       newUrl: blob.url,
-      message: 'Sammanfattning har lagts till',
+      message: 'Summary has been added',
     });
   } catch (error) {
     console.error('Summarize error:', error);
     return NextResponse.json(
-      { success: false, error: 'Ett oväntat fel uppstod' },
+      { success: false, error: 'An unexpected error occurred' },
       { status: 500 }
     );
   }

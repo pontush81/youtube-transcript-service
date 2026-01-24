@@ -16,23 +16,23 @@ export function generateMarkdown(
 
   lines.push(`# ${metadata.title}`);
   lines.push('');
-  lines.push(`> **Video:** [Se på YouTube](${metadata.url})`);
+  lines.push(`> **Video:** [Watch on YouTube](${metadata.url})`);
   lines.push(`>`);
-  lines.push(`> **Skapad:** ${new Date(metadata.createdAt).toLocaleDateString('sv-SE', { year: 'numeric', month: 'long', day: 'numeric' })}`);
+  lines.push(`> **Created:** ${new Date(metadata.createdAt).toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })}`);
 
   if (metadata.submitter) {
     lines.push(`>`);
-    lines.push(`> **Inskickad av:** ${metadata.submitter}`);
+    lines.push(`> **Submitted by:** ${metadata.submitter}`);
   }
 
   if (metadata.tags && metadata.tags.length > 0) {
     lines.push(`>`);
-    lines.push(`> **Taggar:** ${metadata.tags.join(', ')}`);
+    lines.push(`> **Tags:** ${metadata.tags.join(', ')}`);
   }
 
   if (metadata.notes) {
     lines.push('');
-    lines.push(`**Anteckningar:** ${metadata.notes}`);
+    lines.push(`**Notes:** ${metadata.notes}`);
   }
 
   lines.push('');

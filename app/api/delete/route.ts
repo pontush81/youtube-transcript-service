@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       {
         success: false,
-        error: 'För många försök. Vänta en stund.',
+        error: 'Too many attempts. Please wait.',
         retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
       },
       { status: 429, headers: rateLimitHeaders(rateLimit) }
@@ -105,7 +105,7 @@ export async function POST(request: NextRequest) {
           results.push({
             videoId,
             success: false,
-            error: 'Ingen behörighet',
+            error: 'No permission',
           });
           continue;
         }
@@ -116,7 +116,7 @@ export async function POST(request: NextRequest) {
           results.push({
             videoId,
             success: false,
-            error: 'Hittades inte',
+            error: 'Not found',
           });
           continue;
         }
@@ -135,7 +135,7 @@ export async function POST(request: NextRequest) {
           results.push({
             videoId,
             success: false,
-            error: 'Kunde inte radera',
+            error: 'Could not delete',
           });
         }
       }
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
       const successful = results.filter(r => r.success).length;
       return NextResponse.json({
         success: true,
-        message: `${successful} av ${videoIds.length} transkript raderade`,
+        message: `${successful} of ${videoIds.length} transcripts deleted`,
         results,
         summary: {
           successful,
@@ -157,7 +157,7 @@ export async function POST(request: NextRequest) {
     const singleParsed = singleDeleteSchema.safeParse(rawBody);
     if (!singleParsed.success) {
       return NextResponse.json(
-        { success: false, error: 'Ogiltiga parametrar' },
+        { success: false, error: 'Invalid parameters' },
         { status: 400 }
       );
     }
@@ -181,7 +181,7 @@ export async function POST(request: NextRequest) {
 
     if (!isAdmin && !isOwner) {
       return NextResponse.json(
-        { success: false, error: isOwner === false && userId ? 'Du kan bara radera dina egna transkript' : 'Ogiltig admin-nyckel' },
+        { success: false, error: isOwner === false && userId ? 'You can only delete your own transcripts' : 'Invalid admin key' },
         { status: 401 }
       );
     }
@@ -195,12 +195,12 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       success: true,
-      message: 'Transkriptet har raderats',
+      message: 'Transcript has been deleted',
     });
   } catch (error) {
     console.error('Delete error:', error);
     return NextResponse.json(
-      { success: false, error: 'Kunde inte radera transkriptet' },
+      { success: false, error: 'Could not delete the transcript' },
       { status: 500 }
     );
   }

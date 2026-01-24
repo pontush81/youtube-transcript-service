@@ -61,7 +61,7 @@ export async function POST(request: NextRequest) {
     const contentResponse = await fetch(blobUrl);
     if (!contentResponse.ok) {
       return NextResponse.json(
-        { success: false, error: 'Kunde inte hämta transkript' },
+        { success: false, error: 'Could not fetch transcript' },
         { status: 404 }
       );
     }
@@ -72,7 +72,7 @@ export async function POST(request: NextRequest) {
     const parts = content.split('---');
     if (parts.length < 2) {
       return NextResponse.json(
-        { success: false, error: 'Ogiltigt transkript-format' },
+        { success: false, error: 'Invalid transcript format' },
         { status: 400 }
       );
     }
@@ -94,7 +94,7 @@ export async function POST(request: NextRequest) {
 
     if (!transcript || transcript.length < 10) {
       return NextResponse.json(
-        { success: false, error: 'Kunde inte hitta transkripttext att formatera' },
+        { success: false, error: 'Could not find transcript text to format' },
         { status: 400 }
       );
     }
@@ -122,12 +122,12 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({
       success: true,
       newUrl: blob.url,
-      message: 'Transkriptet har formaterats',
+      message: 'Transcript has been formatted',
     });
   } catch (error) {
     console.error('Format error:', error);
     return NextResponse.json(
-      { success: false, error: 'Ett oväntat fel uppstod vid formatering' },
+      { success: false, error: 'An unexpected error occurred during formatting' },
       { status: 500 }
     );
   }

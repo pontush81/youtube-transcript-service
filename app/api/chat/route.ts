@@ -34,7 +34,7 @@ export async function POST(request: NextRequest) {
     if (!allowed) {
       return new Response(
         JSON.stringify({
-          error: 'Du har nått din dagliga gräns. Uppgradera till Pro för mer.',
+          error: "You've reached your daily limit. Upgrade to Pro for more.",
           code: 'USAGE_LIMIT'
         }),
         { status: 402, headers: { 'Content-Type': 'application/json' } }
@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
   if (!rateLimit.allowed) {
     return new Response(
       JSON.stringify({
-        error: 'För många förfrågningar. Vänta en stund.',
+        error: 'Too many requests. Please wait.',
         retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
       }),
       {
@@ -102,7 +102,7 @@ export async function POST(request: NextRequest) {
       if (!logged) {
         return new Response(
           JSON.stringify({
-            error: 'Du har nått din dagliga gräns. Uppgradera till Pro för mer.',
+            error: "You've reached your daily limit. Upgrade to Pro for more.",
             code: 'USAGE_LIMIT'
           }),
           { status: 402, headers: { 'Content-Type': 'application/json' } }
@@ -143,7 +143,7 @@ export async function POST(request: NextRequest) {
         } catch (error) {
           console.error('Stream error:', error);
           controller.enqueue(
-            encoder.encode(`data: ${JSON.stringify({ type: 'error', error: 'Ett fel uppstod' })}\n\n`)
+            encoder.encode(`data: ${JSON.stringify({ type: 'error', error: 'An error occurred' })}\n\n`)
           );
           controller.close();
         }
@@ -160,7 +160,7 @@ export async function POST(request: NextRequest) {
   } catch (error) {
     console.error('Chat error:', error);
     return new Response(
-      JSON.stringify({ error: 'Ett fel uppstod' }),
+      JSON.stringify({ error: 'An error occurred' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
     );
   }
