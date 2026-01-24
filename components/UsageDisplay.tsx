@@ -63,13 +63,13 @@ export function UsageDisplay() {
         <>
           <span className="font-medium">Pro</span>
           <span className="hidden sm:inline">
-            {data.usage.chats.used}/{data.usage.chats.limit} chats
+            · {data.usage.chats.used}/{data.usage.chats.limit}
           </span>
         </>
       ) : (
         <>
-          <span>{chatsRemaining}/{data.usage.chats.limit}</span>
-          <span className="hidden sm:inline">idag</span>
+          <span>{data.usage.chats.used}/{data.usage.chats.limit}</span>
+          <span className="hidden sm:inline">chats</span>
         </>
       )}
     </Link>
