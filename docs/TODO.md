@@ -22,10 +22,12 @@
 ---
 
 ### Underhåll
-- [ ] **Månadsvis cleanup** - Kör `POST /api/admin/cleanup-usage` varje månad
-  - Preview först: `GET /api/admin/cleanup-usage`
+- [x] **Månadsvis cleanup** - Automatiserad via Vercel Cron
+  - Körs automatiskt 03:00 den 1:a varje månad
   - Aggregerar data äldre än 3 månader till `usage_monthly`
-  - Raderar detaljrader för att spara utrymme
+  - Loggar till `system_logs` tabellen
+  - Health check: `GET /api/admin/health` (kräver admin key)
+  - Manuell cleanup: `POST /api/admin/cleanup-usage` (preview med GET)
 
 ---
 
