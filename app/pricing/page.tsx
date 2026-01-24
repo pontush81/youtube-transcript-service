@@ -33,29 +33,15 @@ const tiers: PricingTier[] = [
     name: 'Free',
     price: '$0',
     period: '',
-    description: 'Perfect for trying out TubeBase',
+    description: 'Try TubeBase with no commitment',
     features: [
       '3 transcripts per day',
       '3 AI chats per day',
       'Save to knowledge base',
-      'Basic search',
+      'Download as Markdown',
     ],
     available: true,
     cta: 'Current Plan',
-  },
-  {
-    name: 'Starter',
-    price: '$4.99',
-    period: '/month',
-    description: 'For casual users and hobbyists',
-    features: [
-      '20 transcripts per month',
-      '100 AI chats per month',
-      'Everything in Free',
-      'Priority processing',
-    ],
-    available: false,
-    cta: 'Coming Soon',
   },
   {
     name: 'Pro',
@@ -65,29 +51,13 @@ const tiers: PricingTier[] = [
     features: [
       '100 transcripts per month',
       'Unlimited AI chats',
-      'Everything in Starter',
       'Priority support',
-      'Export to Markdown',
+      'Everything in Free',
     ],
-    badge: 'Most Popular',
+    badge: 'Recommended',
     highlight: true,
     available: true,
     cta: 'Upgrade to Pro',
-  },
-  {
-    name: 'Team',
-    price: '$34.99',
-    period: '/month',
-    description: 'For teams and organizations',
-    features: [
-      'Unlimited transcripts',
-      'Unlimited AI chats',
-      'Everything in Pro',
-      'API access',
-      'Team collaboration',
-    ],
-    available: false,
-    cta: 'Coming Soon',
   },
 ];
 
@@ -198,7 +168,7 @@ function PricingContent() {
       )}
 
       {/* Pricing cards */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 max-w-6xl mx-auto">
+      <div className="grid gap-8 md:grid-cols-2 max-w-3xl mx-auto">
         {tiers.map((tier) => {
           const isCurrentPlan =
             (tier.name === 'Free' && !isPro) ||
