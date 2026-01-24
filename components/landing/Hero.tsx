@@ -14,7 +14,7 @@ export function Hero() {
               <span className="absolute inline-flex h-full w-full animate-ping rounded-full bg-red-400 opacity-75"></span>
               <span className="relative inline-flex h-2 w-2 rounded-full bg-red-500"></span>
             </span>
-            Now with AI-powered chat
+            AI-powered chat
           </div>
 
           {/* Headline */}
@@ -48,23 +48,6 @@ export function Hero() {
           </div>
         </div>
 
-        {/* Product screenshot/demo placeholder */}
-        <div className="mt-16 sm:mt-20">
-          <div className="relative mx-auto max-w-5xl">
-            <div className="rounded-xl bg-gray-900/5 p-2 ring-1 ring-gray-900/10">
-              <div className="rounded-lg bg-white p-4 shadow-2xl ring-1 ring-gray-900/5">
-                <div className="aspect-video rounded-lg bg-gradient-to-br from-gray-100 to-gray-200 flex items-center justify-center">
-                  <div className="text-center">
-                    <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
-                      <Play className="h-8 w-8 text-red-600" />
-                    </div>
-                    <p className="text-gray-500">Product demo coming soon</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
       </div>
     </section>
   );

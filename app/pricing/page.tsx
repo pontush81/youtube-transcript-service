@@ -116,6 +116,7 @@ function PricingContent() {
 
   function getTierCTA(tier: PricingTier): string {
     if (tier.name === 'Free' && !isPro) return 'Current Plan';
+    if (tier.name === 'Free' && isPro) return 'Included';
     if (tier.name === 'Pro' && isPro) return 'Current Plan';
     if (!tier.available) return 'Coming Soon';
     return tier.cta;

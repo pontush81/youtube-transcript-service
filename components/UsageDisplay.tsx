@@ -79,31 +79,33 @@ export function UsageDisplay() {
     }
   };
 
+  // Pro users: just show status badge (no link needed, Pricing is in nav)
+  // Free users: link to pricing to upgrade
+  if (isPro) {
+    return (
+      <div
+        className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm ${getStyles()}`}
+        title="Pro subscription active"
+      >
+        <Sparkles className="h-4 w-4" />
+        <span className="font-medium">Pro</span>
+      </div>
+    );
+  }
+
   return (
     <Link
       href="/pricing"
-      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${getStyles()}`}
-      title={worstWarning !== 'ok' && !isPro ? 'Approaching limit - click to upgrade' : 'View usage & pricing'}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors hover:opacity-80 ${getStyles()}`}
+      title={worstWarning !== 'ok' ? 'Approaching limit - click to upgrade' : 'View usage & upgrade'}
     >
-      {isPro ? (
-        <>
-          <Sparkles className="h-4 w-4" />
-          <span className="font-medium">Pro</span>
-          <span className="hidden sm:inline text-purple-500">
-            · {data.usage.chats.used}/{data.usage.chats.limit === -1 ? '∞' : data.usage.chats.limit}
-          </span>
-        </>
-      ) : (
-        <>
-          {worstWarning !== 'ok' && (
-            <AlertTriangle className="h-4 w-4" />
-          )}
-          <span>{data.usage.chats.used}/{data.usage.chats.limit}</span>
-          <span className="hidden sm:inline">
-            {worstWarning === 'critical' ? '- Upgrade' : worstWarning === 'warning' ? 'chats' : 'chats'}
-          </span>
-        </>
+      {worstWarning !== 'ok' && (
+        <AlertTriangle className="h-4 w-4" />
       )}
+      <span>{data.usage.chats.used}/{data.usage.chats.limit}</span>
+      <span className="hidden sm:inline">
+        {worstWarning === 'critical' ? '- Upgrade' : 'chats'}
+      </span>
     </Link>
   );
 }

@@ -1,4 +1,4 @@
-import { Hero, Features, HowItWorks, BetaCTA, CTA } from '@/components/landing';
+import { Hero, Features, HowItWorks, CTA } from '@/components/landing';
 
 export default function Home() {
   return (
@@ -6,7 +6,6 @@ export default function Home() {
       <Hero />
       <Features />
       <HowItWorks />
-      <BetaCTA />
       <CTA />
     </main>
   );
