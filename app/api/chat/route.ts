@@ -6,7 +6,7 @@ import { Message } from '@/lib/ai/types';
 import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { chatRequestSchema, parseRequest } from '@/lib/validations';
-import { useCredit, hasCredits } from '@/lib/credits';
+import { canUse, logUsage } from '@/lib/usage';
 import { isUserAdmin } from '@/lib/admin';
 
 export const runtime = 'nodejs';
@@ -28,14 +28,14 @@ export async function POST(request: NextRequest) {
   // Check if user is admin (admins skip credit checks)
   const isAdmin = await isUserAdmin(userId);
 
-  // Credit check (skip for admins)
+  // Usage check (skip for admins)
   if (!isAdmin) {
-    const userHasCredits = await hasCredits(userId);
-    if (!userHasCredits) {
+    const allowed = await canUse(userId, 'chat');
+    if (!allowed) {
       return new Response(
         JSON.stringify({
-          error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
-          code: 'NO_CREDITS'
+          error: 'Du har nått din dagliga gräns. Uppgradera till Pro för mer.',
+          code: 'USAGE_LIMIT'
         }),
         { status: 402, headers: { 'Content-Type': 'application/json' } }
       );
@@ -96,14 +96,14 @@ export async function POST(request: NextRequest) {
       { role: 'user', content: message },
     ];
 
-    // Deduct credit for this chat request (skip for admins)
+    // Log usage (skip for admins)
     if (!isAdmin) {
-      const creditUsed = await useCredit(userId);
-      if (!creditUsed) {
+      const logged = await logUsage(userId, 'chat');
+      if (!logged) {
         return new Response(
           JSON.stringify({
-            error: 'Inga credits kvar. Köp fler för att fortsätta chatta.',
-            code: 'NO_CREDITS'
+            error: 'Du har nått din dagliga gräns. Uppgradera till Pro för mer.',
+            code: 'USAGE_LIMIT'
           }),
           { status: 402, headers: { 'Content-Type': 'application/json' } }
         );
