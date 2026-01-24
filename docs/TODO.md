@@ -21,6 +21,14 @@
 
 ---
 
+### Underhåll
+- [ ] **Månadsvis cleanup** - Kör `POST /api/admin/cleanup-usage` varje månad
+  - Preview först: `GET /api/admin/cleanup-usage`
+  - Aggregerar data äldre än 3 månader till `usage_monthly`
+  - Raderar detaljrader för att spara utrymme
+
+---
+
 ## Implementerat (2026-01-24)
 - ✅ Freemium + subscription pricing model
 - ✅ Usage tracking (daily for free, monthly for pro)
