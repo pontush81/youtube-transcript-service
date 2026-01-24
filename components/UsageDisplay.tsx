@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Link from 'next/link';
+import { AlertTriangle, Sparkles } from 'lucide-react';
 
 interface UsageData {
   plan: 'free' | 'pro';
@@ -13,6 +14,16 @@ interface UsageData {
     status: string;
     renewsAt: string;
   } | null;
+}
+
+type WarningLevel = 'ok' | 'warning' | 'critical';
+
+function getWarningLevel(used: number, limit: number): WarningLevel {
+  if (limit === -1) return 'ok'; // Unlimited
+  const percentage = (used / limit) * 100;
+  if (percentage >= 100) return 'critical';
+  if (percentage >= 80) return 'warning';
+  return 'ok';
 }
 
 export function UsageDisplay() {
@@ -44,32 +55,53 @@ export function UsageDisplay() {
     return null;
   }
 
-  const chatsRemaining = data.usage.chats.limit - data.usage.chats.used;
-  const isLow = chatsRemaining <= 2;
   const isPro = data.plan === 'pro';
+  const chatWarning = getWarningLevel(data.usage.chats.used, data.usage.chats.limit);
+  const transcriptWarning = getWarningLevel(data.usage.transcripts.used, data.usage.transcripts.limit);
+
+  // Use the worse of the two warning levels
+  const worstWarning: WarningLevel =
+    chatWarning === 'critical' || transcriptWarning === 'critical' ? 'critical' :
+    chatWarning === 'warning' || transcriptWarning === 'warning' ? 'warning' : 'ok';
+
+  // Style based on warning level
+  const getStyles = () => {
+    if (isPro) {
+      return 'bg-purple-100 text-purple-700';
+    }
+    switch (worstWarning) {
+      case 'critical':
+        return 'bg-red-100 text-red-700 animate-pulse';
+      case 'warning':
+        return 'bg-yellow-100 text-yellow-700';
+      default:
+        return 'bg-gray-100 text-gray-700';
+    }
+  };
 
   return (
     <Link
       href="/pricing"
-      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm ${
-        isPro
-          ? 'bg-purple-100 text-purple-700 dark:bg-purple-900 dark:text-purple-300'
-          : isLow
-          ? 'bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-300'
-          : 'bg-gray-100 text-gray-700 dark:bg-gray-800 dark:text-gray-300'
-      }`}
+      className={`flex items-center gap-2 px-3 py-1.5 rounded text-sm transition-colors ${getStyles()}`}
+      title={worstWarning !== 'ok' && !isPro ? 'Approaching limit - click to upgrade' : 'View usage & pricing'}
     >
       {isPro ? (
         <>
+          <Sparkles className="h-4 w-4" />
           <span className="font-medium">Pro</span>
-          <span className="hidden sm:inline">
-            · {data.usage.chats.used}/{data.usage.chats.limit}
+          <span className="hidden sm:inline text-purple-500">
+            · {data.usage.chats.used}/{data.usage.chats.limit === -1 ? '∞' : data.usage.chats.limit}
           </span>
         </>
       ) : (
         <>
+          {worstWarning !== 'ok' && (
+            <AlertTriangle className="h-4 w-4" />
+          )}
           <span>{data.usage.chats.used}/{data.usage.chats.limit}</span>
-          <span className="hidden sm:inline">chats</span>
+          <span className="hidden sm:inline">
+            {worstWarning === 'critical' ? '- Upgrade' : worstWarning === 'warning' ? 'chats' : 'chats'}
+          </span>
         </>
       )}
     </Link>
