@@ -3,9 +3,16 @@ import Stripe from 'stripe';
 import { addCredits } from '@/lib/credits';
 import { activateSubscription, cancelSubscription, updateSubscriptionPeriod } from '@/lib/usage';
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
-  apiVersion: '2025-12-15.clover',
-});
+// Lazy initialization to prevent build errors when env vars are missing
+function getStripe() {
+  const key = process.env.STRIPE_SECRET_KEY;
+  if (!key) {
+    throw new Error('STRIPE_SECRET_KEY is not configured');
+  }
+  return new Stripe(key, {
+    apiVersion: '2025-12-15.clover',
+  });
+}
 
 export async function POST(request: NextRequest) {
   const body = await request.text();
@@ -16,6 +23,8 @@ export async function POST(request: NextRequest) {
   }
 
   let event: Stripe.Event;
+
+  const stripe = getStripe();
 
   try {
     event = stripe.webhooks.constructEvent(
