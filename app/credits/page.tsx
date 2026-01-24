@@ -51,11 +51,11 @@ function CreditsContent() {
           window.location.href = data.url;
         }
       } else {
-        alert('Något gick fel. Försök igen.');
+        alert('Something went wrong. Please try again.');
       }
     } catch (error) {
       console.error('Purchase error:', error);
-      alert('Något gick fel. Försök igen.');
+      alert('Something went wrong. Please try again.');
     } finally {
       setPurchasing(null);
     }
@@ -65,19 +65,19 @@ function CreditsContent() {
     <>
       {success && (
         <div className="mb-8 p-4 bg-green-100 text-green-700 rounded-lg text-center">
-          Köpet genomfördes! Dina credits har lagts till.
+          Purchase completed! Your credits have been added.
         </div>
       )}
 
       {canceled && (
         <div className="mb-8 p-4 bg-yellow-100 text-yellow-700 rounded-lg text-center">
-          Köpet avbröts.
+          Purchase was canceled.
         </div>
       )}
 
       <div className="text-center mb-8">
         <div className="inline-block bg-white dark:bg-gray-800 rounded-lg px-6 py-4 shadow">
-          <span className="text-gray-600 dark:text-gray-400">Ditt saldo: </span>
+          <span className="text-gray-600 dark:text-gray-400">Your balance: </span>
           <span className="text-2xl font-bold">
             {loading ? '...' : credits ?? 0}
           </span>
@@ -96,7 +96,7 @@ function CreditsContent() {
             {pkg.popular && (
               <div className="text-center mb-2">
                 <span className="bg-blue-500 text-white text-xs px-2 py-1 rounded-full">
-                  Populär
+                  Popular
                 </span>
               </div>
             )}
@@ -109,7 +109,7 @@ function CreditsContent() {
               <span className="text-2xl font-bold">{pkg.price} kr</span>
             </div>
             <div className="text-center text-sm text-gray-500 mb-6">
-              {pkg.perCredit} kr per fråga
+              {pkg.perCredit} kr per question
             </div>
             <button
               onClick={() => handlePurchase(pkg.id)}
@@ -120,7 +120,7 @@ function CreditsContent() {
                   : 'bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600'
               } disabled:opacity-50`}
             >
-              {purchasing === pkg.id ? 'Laddar...' : 'Köp'}
+              {purchasing === pkg.id ? 'Loading...' : 'Buy'}
             </button>
           </div>
         ))}
@@ -135,16 +135,16 @@ export default function CreditsPage() {
       <div className="max-w-4xl mx-auto">
         <h1 className="text-3xl font-bold text-center mb-2">Credits</h1>
         <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
-          Köp credits för att chatta med din kunskapsbas
+          Buy credits to chat with your knowledge base
         </p>
 
-        <Suspense fallback={<div className="text-center">Laddar...</div>}>
+        <Suspense fallback={<div className="text-center">Loading...</div>}>
           <CreditsContent />
         </Suspense>
 
         <div className="mt-8 text-center text-sm text-gray-500">
-          <p>1 credit = 1 chattfråga</p>
-          <p>Att lägga till innehåll är gratis</p>
+          <p>1 credit = 1 chat question</p>
+          <p>Adding content is free</p>
         </div>
       </div>
     </div>

@@ -35,7 +35,7 @@ export default function TranscriptsPage() {
   const [deleteResults, setDeleteResults] = useState<Array<{videoId: string; success: boolean; error?: string}> | null>(null);
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('sv-SE', {
+    return new Date(dateString).toLocaleDateString('en-US', {
       year: 'numeric',
       month: 'short',
       day: 'numeric',
@@ -81,7 +81,7 @@ export default function TranscriptsPage() {
     if (selectedIds.size === 0) return;
 
     if (someSelectedNotOwned && !adminKey) {
-      setDeleteError('Admin-nyckel krävs för att radera andras transkript');
+      setDeleteError('Admin key required to delete others\' transcripts');
       return;
     }
 
@@ -102,7 +102,7 @@ export default function TranscriptsPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Radering misslyckades');
+        throw new Error(data.error || 'Deletion failed');
       }
 
       setDeleteResults(data.results);
@@ -129,7 +129,7 @@ export default function TranscriptsPage() {
         }, 1500);
       }
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Ett fel uppstod');
+      setDeleteError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setDeleting(false);
     }
@@ -141,11 +141,11 @@ export default function TranscriptsPage() {
   };
 
   const sortOptions: { value: SortOption; label: string }[] = [
-    { value: 'uploadedAt', label: 'Senast tillagd' },
-    { value: 'published', label: 'Publiceringsdatum' },
-    { value: 'duration', label: 'Längd' },
-    { value: 'views', label: 'Visningar' },
-    { value: 'title', label: 'Titel A-Ö' },
+    { value: 'uploadedAt', label: 'Recently added' },
+    { value: 'published', label: 'Published date' },
+    { value: 'duration', label: 'Duration' },
+    { value: 'views', label: 'Views' },
+    { value: 'title', label: 'Title A-Z' },
   ];
 
   return (
@@ -154,10 +154,10 @@ export default function TranscriptsPage() {
         <div className="flex items-center justify-between mb-4 sm:mb-6">
           <div>
             <h1 className="text-xl sm:text-2xl font-bold text-gray-900">
-              Sparade transkript
+              Saved Transcripts
             </h1>
             <p className="text-gray-600 text-sm hidden sm:block">
-              {transcripts.length} transkript från {channels.length} kanaler i {categories.length} kategorier
+              {transcripts.length} transcripts from {channels.length} channels in {categories.length} categories
             </p>
           </div>
           <div className="flex items-center gap-2">
@@ -169,7 +169,7 @@ export default function TranscriptsPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                 </svg>
-                <span className="hidden sm:inline">Redigera</span>
+                <span className="hidden sm:inline">Edit</span>
               </button>
             )}
             {editMode && (
@@ -180,7 +180,7 @@ export default function TranscriptsPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
-                <span className="hidden sm:inline">Avbryt</span>
+                <span className="hidden sm:inline">Cancel</span>
               </button>
             )}
             <Link
@@ -190,7 +190,7 @@ export default function TranscriptsPage() {
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>
-              <span className="hidden sm:inline">Chatta</span>
+              <span className="hidden sm:inline">Chat</span>
             </Link>
           </div>
         </div>
@@ -201,21 +201,21 @@ export default function TranscriptsPage() {
             <div className="flex flex-wrap items-center justify-between gap-2">
               <div className="flex items-center gap-3">
                 <span className="text-sm text-gray-600">
-                  {selectedIds.size} valda
+                  {selectedIds.size} selected
                 </span>
                 <div className="flex gap-2 text-sm">
                   <button onClick={selectAll} className="text-blue-600 hover:text-blue-800">
-                    Alla
+                    All
                   </button>
                   <span className="text-gray-300">|</span>
                   <button onClick={selectNone} className="text-blue-600 hover:text-blue-800">
-                    Inga
+                    None
                   </button>
                   {userTranscriptCount > 0 && (
                     <>
                       <span className="text-gray-300">|</span>
                       <button onClick={selectOwn} className="text-blue-600 hover:text-blue-800">
-                        Mina
+                        Mine
                       </button>
                     </>
                   )}
@@ -229,7 +229,7 @@ export default function TranscriptsPage() {
                 <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
                 </svg>
-                Radera ({selectedIds.size})
+                Delete ({selectedIds.size})
               </button>
             </div>
           </div>
@@ -250,7 +250,7 @@ export default function TranscriptsPage() {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    Alla
+                    All
                   </button>
                   <button
                     onClick={() => setShowMyOnly(true)}
@@ -260,7 +260,7 @@ export default function TranscriptsPage() {
                         : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
                     }`}
                   >
-                    Mina
+                    Mine
                     <span className={`text-xs px-1.5 py-0.5 rounded-full ${
                       showMyOnly ? 'bg-blue-200' : 'bg-gray-200'
                     }`}>
@@ -277,7 +277,7 @@ export default function TranscriptsPage() {
                   onChange={(e) => setChannelFilter(e.target.value || undefined)}
                   className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Alla kanaler</option>
+                  <option value="">All channels</option>
                   {channels.map((channel) => (
                     <option key={channel.channelId} value={channel.channelId}>
                       {channel.channelName} ({channel.videoCount})
@@ -293,7 +293,7 @@ export default function TranscriptsPage() {
                   onChange={(e) => setCategoryFilter(e.target.value || undefined)}
                   className="px-3 py-1.5 text-sm font-medium rounded-lg bg-gray-100 text-gray-600 hover:bg-gray-200 border-0 cursor-pointer focus:ring-2 focus:ring-blue-500"
                 >
-                  <option value="">Alla kategorier</option>
+                  <option value="">All categories</option>
                   {categories.map((category) => (
                     <option key={category.categoryId} value={category.categoryId.toString()}>
                       {category.categoryName} ({category.videoCount})
@@ -330,7 +330,7 @@ export default function TranscriptsPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Sök titel eller kanal..."
+                placeholder="Search title or channel..."
                 className="w-full pl-10 pr-4 py-2.5 text-sm border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none"
               />
               {searchQuery && (
@@ -359,27 +359,27 @@ export default function TranscriptsPage() {
                 onClick={() => window.location.reload()}
                 className="text-blue-600 hover:text-blue-800 underline"
               >
-                Försök igen
+                Try again
               </button>
             </div>
           ) : transcripts.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-500 mb-4">Inga transkript sparade än.</p>
+              <p className="text-gray-500 mb-4">No transcripts saved yet.</p>
               <Link
                 href="/"
                 className="text-blue-600 hover:text-blue-800 underline"
               >
-                Hämta ditt första transkript
+                Fetch your first transcript
               </Link>
             </div>
           ) : filteredTranscripts.length === 0 ? (
             <div className="p-8 text-center">
-              <p className="text-gray-500 mb-2">Inga transkript matchar &quot;{searchQuery}&quot;</p>
+              <p className="text-gray-500 mb-2">No transcripts match &quot;{searchQuery}&quot;</p>
               <button
                 onClick={() => setSearchQuery('')}
                 className="text-blue-600 hover:text-blue-800 underline text-sm"
               >
-                Rensa sökning
+                Clear search
               </button>
             </div>
           ) : (
@@ -404,28 +404,28 @@ export default function TranscriptsPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Radera {selectedIds.size} transkript
+              Delete {selectedIds.size} transcripts
             </h3>
 
             {!deleteResults && (
               <>
                 <p className="text-gray-600 mb-4">
                   {allSelectedAreOwned
-                    ? 'Är du säker på att du vill radera dessa transkript? Detta kan inte ångras.'
-                    : 'Några av de valda transkripten är inte dina. Ange admin-nyckel för att radera dem.'}
+                    ? 'Are you sure you want to delete these transcripts? This cannot be undone.'
+                    : 'Some of the selected transcripts are not yours. Enter admin key to delete them.'}
                 </p>
 
                 {someSelectedNotOwned && (
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Admin-nyckel
+                      Admin key
                     </label>
                     <input
                       type="password"
                       value={adminKey}
                       onChange={(e) => setAdminKey(e.target.value)}
                       className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                      placeholder="Krävs för att radera andras transkript"
+                      placeholder="Required to delete others' transcripts"
                     />
                   </div>
                 )}
@@ -477,7 +477,7 @@ export default function TranscriptsPage() {
                 }}
                 className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
               >
-                {deleteResults ? 'Stäng' : 'Avbryt'}
+                {deleteResults ? 'Close' : 'Cancel'}
               </button>
               {!deleteResults && (
                 <button
@@ -485,7 +485,7 @@ export default function TranscriptsPage() {
                   disabled={deleting || (someSelectedNotOwned && !adminKey)}
                   className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
                 >
-                  {deleting ? 'Raderar...' : 'Radera'}
+                  {deleting ? 'Deleting...' : 'Delete'}
                 </button>
               )}
             </div>
@@ -554,7 +554,7 @@ function TranscriptRow({
           </p>
           {transcript.isOwner && (
             <span className="flex-shrink-0 text-xs px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded-full">
-              Din
+              Mine
             </span>
           )}
         </div>

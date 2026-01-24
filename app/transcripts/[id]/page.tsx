@@ -31,9 +31,9 @@ export default function TranscriptViewPage() {
   useEffect(() => {
     async function fetchTranscript() {
       try {
-        // Hämta URL från API
+        // Fetch URL from API
         const response = await fetch('/api/transcripts');
-        if (!response.ok) throw new Error('Kunde inte hämta transkript');
+        if (!response.ok) throw new Error('Could not fetch transcript');
 
         const data = await response.json();
         const transcript = data.transcripts.find(
@@ -41,29 +41,29 @@ export default function TranscriptViewPage() {
         );
 
         if (!transcript) {
-          throw new Error('Transkriptet hittades inte');
+          throw new Error('Transcript not found');
         }
 
         setBlobUrl(transcript.url);
         setTitle(transcript.title || '');
         setIsOwner(transcript.isOwner || false);
 
-        // Hämta innehållet
+        // Fetch content
         const contentResponse = await fetch(transcript.url);
-        if (!contentResponse.ok) throw new Error('Kunde inte läsa transkriptet');
+        if (!contentResponse.ok) throw new Error('Could not read the transcript');
 
         const text = await contentResponse.text();
         setContent(text);
 
-        // Kolla om redan AI-formaterad (har rubriker EFTER "## Transkript" eller talare-markeringar)
-        const transcriptSection = text.split('## Transkript')[1] || '';
-        const hasAIFormatting = transcriptSection.includes('\n## ') || transcriptSection.includes('**Talare');
+        // Check if already AI-formatted (has headings AFTER "## Transcript" or speaker markings)
+        const transcriptSection = text.split('## Transkript')[1] || text.split('## Transcript')[1] || '';
+        const hasAIFormatting = transcriptSection.includes('\n## ') || transcriptSection.includes('**Talare') || transcriptSection.includes('**Speaker');
         setIsFormatted(hasAIFormatting);
 
-        // Kolla om redan har sammanfattning
+        // Check if already has summary
         setHasSummary(text.includes('## Sammanfattning') || text.includes('## Summary'));
       } catch (err) {
-        setError(err instanceof Error ? err.message : 'Ett fel uppstod');
+        setError(err instanceof Error ? err.message : 'An error occurred');
       } finally {
         setLoading(false);
       }
@@ -91,16 +91,16 @@ export default function TranscriptViewPage() {
       const contentType = response.headers.get('content-type');
       if (!contentType?.includes('application/json')) {
         const text = await response.text();
-        throw new Error(text || 'Serverfel vid formatering');
+        throw new Error(text || 'Server error during formatting');
       }
 
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Formatering misslyckades');
+        throw new Error(data.error || 'Formatting failed');
       }
 
-      // Hämta det nya innehållet
+      // Fetch the new content
       if (data.newUrl) {
         const newContentResponse = await fetch(data.newUrl);
         if (newContentResponse.ok) {
@@ -111,7 +111,7 @@ export default function TranscriptViewPage() {
         }
       }
     } catch (err) {
-      setFormatError(err instanceof Error ? err.message : 'Ett fel uppstod');
+      setFormatError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setFormatting(false);
     }
@@ -138,13 +138,13 @@ export default function TranscriptViewPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Radering misslyckades');
+        throw new Error(data.error || 'Deletion failed');
       }
 
-      // Redirect till listan
+      // Redirect to the list
       router.push('/transcripts');
     } catch (err) {
-      setDeleteError(err instanceof Error ? err.message : 'Ett fel uppstod');
+      setDeleteError(err instanceof Error ? err.message : 'An error occurred');
       setDeleting(false);
     }
   };
@@ -165,10 +165,10 @@ export default function TranscriptViewPage() {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.error || 'Sammanfattning misslyckades');
+        throw new Error(data.error || 'Summarization failed');
       }
 
-      // Hämta det nya innehållet
+      // Fetch the new content
       if (data.newUrl) {
         const newContentResponse = await fetch(data.newUrl);
         if (newContentResponse.ok) {
@@ -179,7 +179,7 @@ export default function TranscriptViewPage() {
         }
       }
     } catch (err) {
-      setSummarizeError(err instanceof Error ? err.message : 'Ett fel uppstod');
+      setSummarizeError(err instanceof Error ? err.message : 'An error occurred');
     } finally {
       setSummarizing(false);
     }
@@ -197,7 +197,7 @@ export default function TranscriptViewPage() {
               href="/transcripts"
               className="text-blue-600 hover:text-blue-800 underline"
             >
-              Tillbaka till listan
+              Back to list
             </Link>
           </div>
         ) : (
@@ -220,7 +220,7 @@ export default function TranscriptViewPage() {
                     clipRule="evenodd"
                   />
                 </svg>
-                Tillbaka
+                Back
               </Link>
               {/* Action buttons - wrap on mobile */}
               <div className="flex flex-wrap items-center gap-2">
@@ -229,7 +229,7 @@ export default function TranscriptViewPage() {
                     onClick={handleFormat}
                     disabled={formatting}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-purple-600 text-white rounded-lg hover:bg-purple-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Formatera"
+                    title="Format"
                   >
                     {formatting ? (
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
@@ -243,7 +243,7 @@ export default function TranscriptViewPage() {
                         <path d="M13.586 3.586a2 2 0 112.828 2.828l-.793.793-2.828-2.828.793-.793zM11.379 5.793L3 14.172V17h2.828l8.38-8.379-2.83-2.828z" />
                       </svg>
                     )}
-                    <span className="hidden sm:inline">{formatting ? 'Formaterar...' : 'Formatera'}</span>
+                    <span className="hidden sm:inline">{formatting ? 'Formatting...' : 'Format'}</span>
                   </button>
                 )}
                 {!hasSummary && (
@@ -251,7 +251,7 @@ export default function TranscriptViewPage() {
                     onClick={handleSummarize}
                     disabled={summarizing}
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
-                    title="Sammanfatta"
+                    title="Summarize"
                   >
                     {summarizing ? (
                       <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
@@ -265,7 +265,7 @@ export default function TranscriptViewPage() {
                         <path fillRule="evenodd" d="M3 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h12a1 1 0 110 2H4a1 1 0 01-1-1zm0 4a1 1 0 011-1h7a1 1 0 110 2H4a1 1 0 01-1-1z" clipRule="evenodd" />
                       </svg>
                     )}
-                    <span className="hidden sm:inline">{summarizing ? 'Sammanfattar...' : 'Sammanfatta'}</span>
+                    <span className="hidden sm:inline">{summarizing ? 'Summarizing...' : 'Summarize'}</span>
                   </button>
                 )}
                 {blobUrl && (
@@ -273,7 +273,7 @@ export default function TranscriptViewPage() {
                     href={blobUrl}
                     download
                     className="inline-flex items-center gap-1.5 px-3 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors text-sm font-medium"
-                    title="Ladda ner"
+                    title="Download"
                   >
                     <svg
                       xmlns="http://www.w3.org/2000/svg"
@@ -287,13 +287,13 @@ export default function TranscriptViewPage() {
                         clipRule="evenodd"
                       />
                     </svg>
-                    <span className="hidden sm:inline">Ladda ner</span>
+                    <span className="hidden sm:inline">Download</span>
                   </a>
                 )}
                 <button
                   onClick={() => setShowDeleteModal(true)}
                   className="inline-flex items-center gap-1.5 px-3 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors text-sm font-medium"
-                  title="Radera"
+                  title="Delete"
                 >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
@@ -307,7 +307,7 @@ export default function TranscriptViewPage() {
                       clipRule="evenodd"
                     />
                   </svg>
-                  <span className="hidden sm:inline">Radera</span>
+                  <span className="hidden sm:inline">Delete</span>
                 </button>
               </div>
             </div>
@@ -381,25 +381,25 @@ export default function TranscriptViewPage() {
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
           <div className="bg-white rounded-xl p-6 max-w-md w-full shadow-xl">
             <h3 className="text-lg font-bold text-gray-900 mb-2">
-              Radera transkript
+              Delete transcript
             </h3>
             <p className="text-gray-600 mb-4">
               {isOwner
-                ? 'Är du säker på att du vill radera detta transkript? Detta kan inte ångras.'
-                : 'Detta är inte ditt transkript. Ange admin-nyckel för att radera det.'}
+                ? 'Are you sure you want to delete this transcript? This cannot be undone.'
+                : 'This is not your transcript. Enter admin key to delete it.'}
             </p>
 
             {!isOwner && (
               <div className="mb-4">
                 <label className="block text-sm font-medium text-gray-700 mb-1">
-                  Admin-nyckel
+                  Admin key
                 </label>
                 <input
                   type="password"
                   value={adminKey}
                   onChange={(e) => setAdminKey(e.target.value)}
                   className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-red-500 focus:border-red-500"
-                  placeholder="Ange admin-nyckel"
+                  placeholder="Enter admin key"
                 />
               </div>
             )}
@@ -419,14 +419,14 @@ export default function TranscriptViewPage() {
                 }}
                 className="px-4 py-2 text-gray-700 hover:text-gray-900 font-medium"
               >
-                Avbryt
+                Cancel
               </button>
               <button
                 onClick={handleDelete}
                 disabled={deleting || (!isOwner && !adminKey)}
                 className="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 font-medium disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                {deleting ? 'Raderar...' : 'Radera'}
+                {deleting ? 'Deleting...' : 'Delete'}
               </button>
             </div>
           </div>

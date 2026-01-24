@@ -8,7 +8,7 @@ import DownloadButton from '@/components/DownloadButton';
 function SuccessContent() {
   const searchParams = useSearchParams();
 
-  const title = searchParams.get('title') || 'Okänd video';
+  const title = searchParams.get('title') || 'Unknown video';
   const downloadUrl = searchParams.get('downloadUrl') || '';
   const preview = searchParams.get('preview') || '';
   const videoId = searchParams.get('videoId') || '';
@@ -16,12 +16,12 @@ function SuccessContent() {
   if (!downloadUrl) {
     return (
       <div className="text-center">
-        <p className="text-red-600 mb-4">Ingen nedladdningslänk hittades.</p>
+        <p className="text-red-600 mb-4">No download link found.</p>
         <Link
           href="/"
           className="text-blue-600 hover:text-blue-800 underline"
         >
-          Tillbaka till startsidan
+          Back to home
         </Link>
       </div>
     );
@@ -45,7 +45,7 @@ function SuccessContent() {
           </svg>
         </div>
         <h1 className="text-2xl font-bold text-gray-900 mb-2">
-          Transkript skapat!
+          Transcript Created!
         </h1>
         <p className="text-gray-600">{title}</p>
       </div>
@@ -63,7 +63,7 @@ function SuccessContent() {
           >
             <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
           </svg>
-          Läs transkript
+          Read Transcript
         </Link>
         <DownloadButton
           url={downloadUrl}
@@ -74,7 +74,7 @@ function SuccessContent() {
       {preview && (
         <div className="bg-gray-50 p-6 rounded-lg border border-gray-200">
           <h2 className="text-sm font-medium text-gray-700 mb-3">
-            Förhandsvisning
+            Preview
           </h2>
           <p className="text-gray-600 text-sm leading-relaxed whitespace-pre-wrap">
             {preview}
@@ -87,7 +87,7 @@ function SuccessContent() {
           href="/"
           className="text-blue-600 hover:text-blue-800 underline"
         >
-          Hämta nytt transkript
+          Fetch new transcript
         </Link>
       </div>
     </div>
@@ -102,7 +102,7 @@ export default function SuccessPage() {
           <Suspense
             fallback={
               <div className="text-center py-8">
-                <p className="text-gray-500">Laddar...</p>
+                <p className="text-gray-500">Loading...</p>
               </div>
             }
           >

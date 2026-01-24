@@ -55,11 +55,11 @@ function PricingContent() {
           window.location.href = url;
         }
       } else {
-        alert('Något gick fel. Försök igen.');
+        alert('Something went wrong. Please try again.');
       }
     } catch (error) {
       console.error('Subscribe error:', error);
-      alert('Något gick fel. Försök igen.');
+      alert('Something went wrong. Please try again.');
     } finally {
       setSubscribing(false);
     }
@@ -71,13 +71,13 @@ function PricingContent() {
     <>
       {success && (
         <div className="mb-8 p-4 bg-green-100 text-green-700 rounded-lg text-center">
-          Välkommen till Pro! Din prenumeration är nu aktiv.
+          Welcome to Pro! Your subscription is now active.
         </div>
       )}
 
       {canceled && (
         <div className="mb-8 p-4 bg-yellow-100 text-yellow-700 rounded-lg text-center">
-          Prenumerationen avbröts.
+          Subscription was canceled.
         </div>
       )}
 
@@ -86,7 +86,7 @@ function PricingContent() {
         <div className="text-center mb-8">
           <div className="inline-block bg-white dark:bg-gray-800 rounded-lg px-6 py-4 shadow">
             <div className="text-sm text-gray-500 mb-1">
-              {isPro ? 'Denna månad' : 'Idag'}
+              {isPro ? 'This month' : 'Today'}
             </div>
             <div className="flex gap-6">
               <div>
@@ -95,7 +95,7 @@ function PricingContent() {
               </div>
               <div>
                 <span className="text-2xl font-bold">{data.usage.transcripts.used}</span>
-                <span className="text-gray-500">/{data.usage.transcripts.limit} transkript</span>
+                <span className="text-gray-500">/{data.usage.transcripts.limit} transcripts</span>
               </div>
             </div>
           </div>
@@ -115,20 +115,20 @@ function PricingContent() {
           <ul className="space-y-2 mb-6 text-sm">
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              3 AI-chats per dag
+              3 AI chats per day
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              3 transkript per dag
+              3 transcripts per day
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              Spara i din kunskapsbas
+              Save to your knowledge base
             </li>
           </ul>
           {!isPro && (
             <div className="text-center text-sm text-gray-500">
-              Din nuvarande plan
+              Your current plan
             </div>
           )}
         </div>
@@ -139,40 +139,40 @@ function PricingContent() {
         }`}>
           <div className="text-center mb-2">
             <span className="bg-purple-500 text-white text-xs px-2 py-1 rounded-full">
-              Rekommenderad
+              Recommended
             </span>
           </div>
           <h2 className="text-xl font-bold text-center mb-2">Pro</h2>
           <div className="text-center mb-4">
             <span className="text-3xl font-bold">99 kr</span>
-            <span className="text-gray-500">/månad</span>
+            <span className="text-gray-500">/month</span>
           </div>
           <ul className="space-y-2 mb-6 text-sm">
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              300 AI-chats per månad
+              300 AI chats per month
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              100 transkript per månad
+              100 transcripts per month
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              Spara i din kunskapsbas
+              Save to your knowledge base
             </li>
             <li className="flex items-center gap-2">
               <span className="text-green-500">&#10003;</span>
-              Prioriterad support
+              Priority support
             </li>
           </ul>
           {isPro ? (
             <div className="text-center">
               <div className="text-sm text-purple-600 font-medium mb-1">
-                Din nuvarande plan
+                Your current plan
               </div>
               {data?.subscription?.renewsAt && (
                 <div className="text-xs text-gray-500">
-                  Förnyas {new Date(data.subscription.renewsAt).toLocaleDateString('sv-SE')}
+                  Renews {new Date(data.subscription.renewsAt).toLocaleDateString('en-US')}
                 </div>
               )}
             </div>
@@ -182,7 +182,7 @@ function PricingContent() {
               disabled={subscribing || loading}
               className="w-full py-3 rounded-lg font-semibold bg-purple-500 text-white hover:bg-purple-600 disabled:opacity-50 transition"
             >
-              {subscribing ? 'Laddar...' : 'Uppgradera till Pro'}
+              {subscribing ? 'Loading...' : 'Upgrade to Pro'}
             </button>
           )}
         </div>
@@ -195,12 +195,12 @@ export default function PricingPage() {
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900 py-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <h1 className="text-3xl font-bold text-center mb-2">Priser</h1>
+        <h1 className="text-3xl font-bold text-center mb-2">Pricing</h1>
         <p className="text-center text-gray-600 dark:text-gray-400 mb-8">
-          Välj den plan som passar dig
+          Choose the plan that fits you
         </p>
 
-        <Suspense fallback={<div className="text-center">Laddar...</div>}>
+        <Suspense fallback={<div className="text-center">Loading...</div>}>
           <PricingContent />
         </Suspense>
       </div>
