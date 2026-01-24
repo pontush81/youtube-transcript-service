@@ -11,7 +11,6 @@ const isPublicRoute = createRouteMatcher([
   '/api/db/(.*)',        // Admin DB routes (use admin key)
   '/api/metadata/(.*)',  // Metadata backfill (use admin key)
   '/api/admin/(.*)',     // Admin routes (use admin key or Clerk admin role)
-  '/api/debug-transcript(.*)',  // Debug endpoint (temporary)
 ]);
 
 // Security headers
