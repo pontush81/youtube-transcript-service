@@ -45,6 +45,7 @@ https://github.com/pontush81/youtube-transcript-service
 - `YOUTUBE_API_KEY` - Google Cloud API key för rik metadata och spellistor
 - `OPENAI_API_KEY` - För AI-formatering av transkript
 - `ADMIN_KEY` - För admin API-åtkomst utan Clerk
+- `RESEND_API_KEY` - För email-notifieringar vid nya användare
 
 ## Funktionalitet utan API-nycklar
 Kärn-funktionalitet fungerar helt utan externa API-nycklar:

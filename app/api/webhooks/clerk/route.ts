@@ -2,6 +2,14 @@ import { Webhook } from 'svix';
 import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
+import { Resend } from 'resend';
+
+const ADMIN_EMAIL = 'pontus.hberg@gmail.com';
+
+function getResend() {
+  if (!process.env.RESEND_API_KEY) return null;
+  return new Resend(process.env.RESEND_API_KEY);
+}
 
 export async function POST(req: Request) {
   const WEBHOOK_SECRET = process.env.CLERK_WEBHOOK_SECRET;
@@ -57,6 +65,28 @@ export async function POST(req: Request) {
         image = EXCLUDED.image,
         updated_at = NOW()
     `;
+
+    // Send notification email for new users
+    if (eventType === 'user.created') {
+      const resend = getResend();
+      if (resend) {
+        try {
+          await resend.emails.send({
+          from: 'TubeBase <onboarding@resend.dev>',
+          to: ADMIN_EMAIL,
+          subject: '🎉 Ny användare på TubeBase',
+          html: `
+            <h2>Ny användare har registrerat sig!</h2>
+            <p><strong>Namn:</strong> ${name || 'Ej angivet'}</p>
+            <p><strong>Email:</strong> ${email || 'Ej angivet'}</p>
+            <p><strong>Tidpunkt:</strong> ${new Date().toLocaleString('sv-SE')}</p>
+          `,
+        });
+        } catch (error) {
+          console.error('Failed to send new user notification:', error);
+        }
+      }
+    }
   }
 
   if (eventType === 'user.deleted') {
