@@ -9,7 +9,7 @@ export function CTA() {
           Ready to turn videos into knowledge?
         </h2>
         <p className="mx-auto mt-4 max-w-2xl text-lg text-red-100">
-          Start free with 3 transcripts per day. No credit card required.
+          Unlimited transcripts. Free to use.
         </p>
         <div className="mt-10">
           <Link

@@ -6,8 +6,6 @@ import { Message } from '@/lib/ai/types';
 import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { chatRequestSchema, parseRequest } from '@/lib/validations';
-import { canUse, logUsage } from '@/lib/usage';
-import { isUserAdmin } from '@/lib/admin';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -23,23 +21,6 @@ export async function POST(request: NextRequest) {
       JSON.stringify({ error: 'Unauthorized' }),
       { status: 401, headers: { 'Content-Type': 'application/json' } }
     );
-  }
-
-  // Check if user is admin (admins skip credit checks)
-  const isAdmin = await isUserAdmin(userId);
-
-  // Usage check (skip for admins)
-  if (!isAdmin) {
-    const allowed = await canUse(userId, 'chat');
-    if (!allowed) {
-      return new Response(
-        JSON.stringify({
-          error: "You've reached your daily limit. Upgrade to Pro for more.",
-          code: 'USAGE_LIMIT'
-        }),
-        { status: 402, headers: { 'Content-Type': 'application/json' } }
-      );
-    }
   }
 
   // Rate limiting
@@ -95,20 +76,6 @@ export async function POST(request: NextRequest) {
       ...conversationHistory,
       { role: 'user', content: message },
     ];
-
-    // Log usage (skip for admins)
-    if (!isAdmin) {
-      const logged = await logUsage(userId, 'chat');
-      if (!logged) {
-        return new Response(
-          JSON.stringify({
-            error: "You've reached your daily limit. Upgrade to Pro for more.",
-            code: 'USAGE_LIMIT'
-          }),
-          { status: 402, headers: { 'Content-Type': 'application/json' } }
-        );
-      }
-    }
 
     // Create streaming response
     const encoder = new TextEncoder();

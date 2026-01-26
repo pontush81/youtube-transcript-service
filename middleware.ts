@@ -5,7 +5,6 @@ import { NextResponse } from 'next/server';
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
   '/sign-up(.*)',
-  '/pricing(.*)',        // Pricing page (public for marketing)
   '/api/webhooks/(.*)',  // Clerk webhooks
   '/api/webhook(.*)',    // Zapier webhook (uses API key)
   '/api/db/(.*)',        // Admin DB routes (use admin key)

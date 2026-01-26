@@ -8,8 +8,6 @@ import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
-import { canUse, logUsage } from '@/lib/usage';
-import { isUserAdmin } from '@/lib/admin';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
 // export const runtime = 'edge';
@@ -30,23 +28,8 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Check usage limits for logged-in users
+  // Get user ID for linking transcript
   const { userId } = await auth();
-  if (userId) {
-    const isAdmin = await isUserAdmin(userId);
-    if (!isAdmin) {
-      const allowed = await canUse(userId, 'transcript');
-      if (!allowed) {
-        return NextResponse.json(
-          {
-            success: false,
-            error: "You've reached your transcript limit. Upgrade to Pro for more.",
-          },
-          { status: 429 }
-        );
-      }
-    }
-  }
 
   try {
     const rawBody = await request.json();
@@ -139,12 +122,8 @@ export async function POST(request: NextRequest) {
       console.error('Failed to save video metadata:', error);
     }
 
-    // Link transcript to user and log usage if logged in
+    // Link transcript to user if logged in
     if (userId) {
-      // Log usage for quota tracking
-      await logUsage(userId, 'transcript');
-
-      // Link transcript to user
       try {
         await sql`
           INSERT INTO user_transcripts (user_id, video_id, blob_url, is_public)

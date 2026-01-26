@@ -9,8 +9,6 @@ import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube'
 import { generateMarkdown } from '@/lib/markdown';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
-import { canUse, logUsage } from '@/lib/usage';
-import { isUserAdmin } from '@/lib/admin';
 import { z } from 'zod';
 
 const addContentSchema = z.object({
@@ -22,21 +20,6 @@ export async function POST(request: NextRequest) {
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-  }
-
-  // Usage check (skip for admins)
-  const isAdmin = await isUserAdmin(userId);
-  if (!isAdmin) {
-    const allowed = await canUse(userId, 'transcript');
-    if (!allowed) {
-      return NextResponse.json(
-        {
-          error: 'Du har nått din dagliga gräns. Uppgradera till Pro för mer.',
-          code: 'USAGE_LIMIT'
-        },
-        { status: 402 }
-      );
-    }
   }
 
   // Rate limiting
@@ -70,9 +53,9 @@ export async function POST(request: NextRequest) {
     const contentType = detectContentType(url);
 
     if (contentType === 'youtube') {
-      return handleYouTube(url, userId, isAdmin);
+      return handleYouTube(url, userId);
     } else {
-      return handleWebContent(url, userId, isAdmin);
+      return handleWebContent(url, userId);
     }
   } catch (error) {
     console.error('Add content error:', error);
@@ -83,7 +66,7 @@ export async function POST(request: NextRequest) {
   }
 }
 
-async function handleYouTube(url: string, userId: string, isAdmin: boolean) {
+async function handleYouTube(url: string, userId: string) {
   const videoId = extractVideoId(url);
 
   if (!videoId) {
@@ -147,11 +130,6 @@ async function handleYouTube(url: string, userId: string, isAdmin: boolean) {
       source_url = EXCLUDED.source_url
   `;
 
-  // Log usage (only for non-admins)
-  if (!isAdmin) {
-    await logUsage(userId, 'transcript');
-  }
-
   return NextResponse.json({
     success: true,
     contentType: 'youtube',
@@ -161,7 +139,7 @@ async function handleYouTube(url: string, userId: string, isAdmin: boolean) {
   });
 }
 
-async function handleWebContent(url: string, userId: string, isAdmin: boolean) {
+async function handleWebContent(url: string, userId: string) {
   // Scrape the web page
   let scraped;
   try {
@@ -220,11 +198,6 @@ ${scraped.content}
       source_url = EXCLUDED.source_url,
       metadata = EXCLUDED.metadata
   `;
-
-  // Log usage (only for non-admins)
-  if (!isAdmin) {
-    await logUsage(userId, 'transcript');
-  }
 
   return NextResponse.json({
     success: true,
