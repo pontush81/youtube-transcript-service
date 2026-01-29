@@ -1,12 +1,6 @@
-import { Hero, Features, HowItWorks, CTA } from '@/components/landing';
+import { redirect } from 'next/navigation';
 
 export default function Home() {
-  return (
-    <main>
-      <Hero />
-      <Features />
-      <HowItWorks />
-      <CTA />
-    </main>
-  );
+  // Redirect authenticated users directly to transcripts
+  redirect('/transcripts');
 }

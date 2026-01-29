@@ -1,14 +1,11 @@
 import { MetadataRoute } from 'next';
 
 export default function robots(): MetadataRoute.Robots {
-  const baseUrl = process.env.NEXT_PUBLIC_URL || 'https://tubebase.app';
-
+  // Internal tool - no indexing
   return {
     rules: {
       userAgent: '*',
-      allow: '/',
-      disallow: ['/api/', '/transcripts/', '/chat'],
+      disallow: '/',
     },
-    sitemap: `${baseUrl}/sitemap.xml`,
   };
 }

@@ -13,7 +13,7 @@ export default function SignInPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Transcript Service</h1>
         </div>
-        <p className="text-gray-500">Hämta och hantera YouTube-transkript</p>
+        <p className="text-gray-500">Sign in to continue</p>
       </div>
 
       <SignIn
@@ -46,7 +46,6 @@ export default function SignInPage() {
         }}
         routing="path"
         path="/sign-in"
-        signUpUrl="/sign-up"
       />
     </div>
   );

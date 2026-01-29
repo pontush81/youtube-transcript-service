@@ -2,9 +2,11 @@ import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
 import { NextResponse } from 'next/server';
 
 // Routes that DON'T require authentication
+// NOTE: Sign-up is public but should be restricted in Clerk Dashboard:
+// Clerk Dashboard → Configure → Restrictions → Sign-up mode: "Restricted"
 const isPublicRoute = createRouteMatcher([
   '/sign-in(.*)',
-  '/sign-up(.*)',
+  '/sign-up(.*)',        // Keep public for Clerk invites (restrict in Clerk Dashboard)
   '/api/webhooks/(.*)',  // Clerk webhooks
   '/api/webhook(.*)',    // Zapier webhook (uses API key)
   '/api/db/(.*)',        // Admin DB routes (use admin key)

@@ -13,7 +13,7 @@ export default function SignUpPage() {
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Transcript Service</h1>
         </div>
-        <p className="text-gray-500">Skapa ett konto för att komma igång</p>
+        <p className="text-gray-500">Invite only</p>
       </div>
 
       <SignUp

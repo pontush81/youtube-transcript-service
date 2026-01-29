@@ -1,0 +1,179 @@
+3. Luckor / risker (inte tekniska – utan perception)
+
+Här är det viktiga:
+Det du inte gör fel är funktion – utan kommunikation av funktion.
+
+⚠️ Risk 1: "Det här är bara en simpel diff"
+
+Hero-texten:
+
+Compare Excel Files in Seconds
+
+Den är korrekt – men undersäljer dig.
+
+Du är inte:
+❌ "diff checker"
+❌ "row by row compare"
+
+Du är:
+✅ Key-aware change detector
+✅ Audit-friendly
+✅ Reproducerbar
+
+Risk 2: Nyckelkolumnen är för viktig för att kännas sekundär
+
+I UI känns nyckelval som:
+
+"något man kan pilla med om det behövs"
+
+För många användare är det:
+
+"hela poängen"
+
+💡 Många tänker:
+
+"Om den inte fattar ID/InvoiceNumber är verktyget värdelöst"
+
+Du löser detta – men användaren vet inte det förrän efter upload.
+
+Risk 3: Numerisk analys är osynlig värde
+
+Du har:
+    •    min/max/avg
+    •    top 5 mest ändrade kolumner
+
+Men användaren ser inte:
+
+"Ah – detta hjälper mig förstå påverkan, inte bara skillnader"
+
+Sammanfattning (ärlig dom)
+
+✅ Täcker du rätt funktioner?
+
+Ja. Mer än de flesta.
+
+❌ Saknar du kritiska features?
+
+Nej. Det du inte har (Google Sheets, konton, historik) är inte MVP-krav.
+
+---
+
+1. Alla use cases ChangeCheck stödjer (strukturerat)
+
+Jag delar upp dem i primära, professionella och avancerade/edge.
+Detta speglar hur användare tänker, inte hur du byggt systemet.
+
+⸻
+
+🟢 A. Primära use cases (80 % av användarna)
+
+Dessa är huvudargumenten. De ska synas direkt.
+
+1. Se exakt vad som ändrats mellan två Excel-filer
+   • Tillagda rader
+   • Borttagna rader
+   • Ändrade celler (före/efter)
+
+2. Jämföra rapporter från olika tidpunkter
+   • Månadsrapporter
+   • Exporter "före och efter"
+   • Version A vs Version B
+
+3. Upptäcka borttappad eller ny data
+   • Saknade kunder, artiklar, fakturor
+   • Nya poster som tillkommit
+
+4. Verifiera att inga oavsiktliga ändringar skett
+   • "Har något ändrats alls?"
+   • Regression checks på data
+
+5. Exportera ändringar för vidare analys eller delning
+   • Skicka till kollega
+   • Ladda upp till revisions- eller ärendehantering
+
+⸻
+
+🟢 B. Professionella use cases (power users / betalande)
+
+Detta är där du slår konkurrenter.
+
+6. Nyckelbaserad jämförelse (ID, faktura, order, kund)
+   • Matchar rätt rader även om ordningen ändrats
+   • Auto-detektion + manuell override
+
+7. Jämföra filer med olika ordning eller olika antal rader
+   • Radposition spelar ingen roll
+   • Endast faktiska ändringar visas
+
+8. Identifiera schemaändringar
+   • Tillagda kolumner
+   • Borttagna kolumner
+   • Strukturella förändringar i datasetet
+
+9. Analysera numeriska förändringar
+   • Hur mycket ändrades värden?
+   • Vilka kolumner påverkades mest?
+   • Största/minsta/genomsnittliga förändringar
+
+10. Arbeta säkert med känslig data
+    • Filer lämnar aldrig enheten
+    • Ingen lagring
+    • GDPR-vänligt
+
+⸻
+
+🟢 C. Branschspecifika use cases (väldigt säljbara)
+
+De här är guld för copy, även om funktionen är samma.
+
+11. Ekonomi & redovisning
+    • Jämföra fakturaexporter
+    • Kontrollera ändringar i kundreskontra
+    • Avstämning mellan system
+
+12. E-handel & produktdata
+    • Prislistor före/efter uppdatering
+    • Artiklar som tillkommit/försvunnit
+    • SKU-ändringar
+
+13. CRM & kunddata
+    • Kundlistor
+    • Kontaktuppdateringar
+    • Dubblettkontroll (indirekt)
+
+14. BI / rapportering
+    • Validera att siffror inte ändrats
+    • Jämföra två exporter från samma källa
+
+15. Revision & compliance
+    • Visa exakt vad som ändrats
+    • Reproducerbara resultat
+    • Exporterbart underlag
+
+⸻
+
+🟢 D. Avancerade / edge-case use cases (underförstått värde)
+
+Dessa behöver inte marknadsföras hårt – men stärker förtroendet.
+
+16. Filer med flera blad
+17. Filer med rubriker ovanför tabellen
+18. CSV + Excel blandat
+19. Filer med Excel-fel (#N/A, #REF!)
+20. Fallback när ingen nyckel finns
+21. Stora filer nära gränsvärden
+22. Diff som är deterministisk (samma input → samma output)
+
+⸻
+
+2. Hur ska de listas? (VIKTIGT)
+
+❌ Inte som en lång teknisk lista
+❌ Inte som "features"
+❌ Inte allt på en gång
+
+✅ Rätt struktur: 3 nivåer
+
+Nivå 1: Hero / Above the fold (3–5 punkter)
+🟢 Nivå 2: "Common use cases" (cards eller sektion)
+🟢 Nivå 3: FAQ / "Advanced capabilities"
