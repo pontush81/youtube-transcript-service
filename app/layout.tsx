@@ -6,8 +6,8 @@ import { ToastProvider } from "@/components/Toast";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Transcript Service",
-  description: "Internal tool",
+  title: "Notes",
+  description: "Personal notes",
   robots: {
     index: false,
     follow: false,
