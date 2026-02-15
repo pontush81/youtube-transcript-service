@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'preact/hooks';
 import { TranscriptTab } from './tabs/TranscriptTab';
 import { SummaryTab } from './tabs/SummaryTab';
+import { ChatTab } from './tabs/ChatTab';
 import { getAuthState, type AuthState } from '../../lib/auth';
 
 type Tab = 'transcript' | 'summary' | 'chat';
@@ -64,7 +65,7 @@ export function Widget({ videoId }: Props) {
       <div>
         {activeTab === 'transcript' && <TranscriptTab videoId={videoId} />}
         {activeTab === 'summary' && <SummaryTab videoId={videoId} />}
-        {activeTab === 'chat' && <div class="p-4 text-xs text-gray-500">Coming soon</div>}
+        {activeTab === 'chat' && <ChatTab videoId={videoId} auth={auth} />}
       </div>
     </div>
   );
