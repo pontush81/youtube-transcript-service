@@ -1,4 +1,5 @@
 import { useState } from 'preact/hooks';
+import { TranscriptTab } from './tabs/TranscriptTab';
 
 type Tab = 'transcript' | 'summary' | 'chat';
 
@@ -52,11 +53,11 @@ export function Widget({ videoId }: Props) {
         ))}
       </div>
 
-      {/* Content placeholder */}
-      <div class="p-4">
-        <p class="text-xs text-gray-500">
-          Active: {activeTab} | Video: {videoId}
-        </p>
+      {/* Content */}
+      <div>
+        {activeTab === 'transcript' && <TranscriptTab videoId={videoId} />}
+        {activeTab === 'summary' && <div class="p-4 text-xs text-gray-500">Coming soon</div>}
+        {activeTab === 'chat' && <div class="p-4 text-xs text-gray-500">Coming soon</div>}
       </div>
     </div>
   );
