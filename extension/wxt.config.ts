@@ -11,6 +11,7 @@ export default defineConfig({
     host_permissions: [
       'https://www.youtube.com/*',
       'https://youtube-transcript-service-two.vercel.app/*',
+      'https://*.clerk.accounts.dev/*',
     ],
   },
   vite: () => ({
