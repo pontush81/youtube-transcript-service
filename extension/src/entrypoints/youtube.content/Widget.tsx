@@ -1,6 +1,7 @@
-import { useState } from 'preact/hooks';
+import { useState, useEffect } from 'preact/hooks';
 import { TranscriptTab } from './tabs/TranscriptTab';
 import { SummaryTab } from './tabs/SummaryTab';
+import { getAuthState, type AuthState } from '../../lib/auth';
 
 type Tab = 'transcript' | 'summary' | 'chat';
 
@@ -11,6 +12,11 @@ interface Props {
 export function Widget({ videoId }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('transcript');
   const [collapsed, setCollapsed] = useState(false);
+  const [auth, setAuth] = useState<AuthState>({ isSignedIn: false, isPro: false, token: null });
+
+  useEffect(() => {
+    getAuthState().then(setAuth);
+  }, []);
 
   if (collapsed) {
     return (
