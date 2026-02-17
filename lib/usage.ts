@@ -1,11 +1,4 @@
-import { Redis } from '@upstash/redis';
-
-const isRedisConfigured = !!(
-  process.env.UPSTASH_REDIS_REST_URL &&
-  process.env.UPSTASH_REDIS_REST_TOKEN
-);
-
-const redis = isRedisConfigured ? Redis.fromEnv() : null;
+import { sql } from '@/lib/db';
 
 const LIMITS = {
   free: { summary: 3, chat: 10 },
@@ -14,11 +7,6 @@ const LIMITS = {
 
 export type Plan = keyof typeof LIMITS;
 export type Feature = 'summary' | 'chat';
-
-function dailyKey(userId: string, feature: Feature): string {
-  const date = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
-  return `usage:${feature}:${userId}:${date}`;
-}
 
 export async function checkUsage(
   userId: string | null,
@@ -30,13 +18,16 @@ export async function checkUsage(
     return { allowed: true, used: 0, limit: -1, remaining: -1 };
   }
 
-  // Anonymous users (no auth) share a single pool -- incentive to sign in
-  const key = dailyKey(userId || 'anon', feature);
-
-  if (!redis) return { allowed: true, used: 0, limit, remaining: limit };
+  const effectiveUserId = userId || 'anon';
 
   try {
-    const used = (await redis.get<number>(key)) || 0;
+    const result = await sql`
+      SELECT count FROM daily_usage
+      WHERE user_id = ${effectiveUserId}
+        AND feature = ${feature}
+        AND date = CURRENT_DATE
+    `;
+    const used = result.rows[0]?.count ?? 0;
     return {
       allowed: used < limit,
       used,
@@ -44,7 +35,7 @@ export async function checkUsage(
       remaining: Math.max(0, limit - used),
     };
   } catch {
-    // If Redis fails, allow the request (fail open)
+    // If DB query fails, allow the request (fail open)
     return { allowed: true, used: 0, limit, remaining: limit };
   }
 }
@@ -53,13 +44,14 @@ export async function incrementUsage(
   userId: string | null,
   feature: Feature
 ): Promise<void> {
-  if (!redis) return;
-  const key = dailyKey(userId || 'anon', feature);
+  const effectiveUserId = userId || 'anon';
   try {
-    const pipeline = redis.pipeline();
-    pipeline.incr(key);
-    pipeline.expire(key, 86400); // 24h TTL
-    await pipeline.exec();
+    await sql`
+      INSERT INTO daily_usage (user_id, feature, date, count)
+      VALUES (${effectiveUserId}, ${feature}, CURRENT_DATE, 1)
+      ON CONFLICT (user_id, feature, date)
+      DO UPDATE SET count = daily_usage.count + 1
+    `;
   } catch {
     // Non-critical -- don't fail the request
   }
