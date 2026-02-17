@@ -1,5 +1,4 @@
 import { useState, useRef, useEffect } from 'preact/hooks';
-import type { AuthState } from '../../../lib/auth';
 
 interface ChatMessage {
   role: 'user' | 'assistant';
@@ -8,7 +7,6 @@ interface ChatMessage {
 
 interface Props {
   videoId: string;
-  auth: AuthState;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -17,7 +15,7 @@ const SUGGESTED_QUESTIONS = [
   'Explain the main argument',
 ];
 
-export function ChatTab({ videoId, auth }: Props) {
+export function ChatTab({ videoId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -45,7 +43,7 @@ export function ChatTab({ videoId, auth }: Props) {
             videoId,
             message: messageText,
             history: messages,
-            token: auth.token,
+            token: null,
           },
           resolve,
         );
@@ -76,63 +74,6 @@ export function ChatTab({ videoId, auth }: Props) {
     }
   }
 
-  // --- Not signed in ---
-  if (!auth.isSignedIn) {
-    return (
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'center',
-          gap: '12px',
-          padding: '32px 16px',
-          textAlign: 'center',
-          fontFamily: 'Roboto, Arial, sans-serif',
-        }}
-      >
-        <p
-          style={{
-            fontSize: '14px',
-            color: 'var(--text-primary)',
-            margin: 0,
-            fontWeight: 500,
-          }}
-        >
-          Chat with this video
-        </p>
-        <p
-          style={{
-            fontSize: '12px',
-            color: 'var(--text-secondary)',
-            margin: 0,
-          }}
-        >
-          Ask questions, get summaries, and explore the content
-        </p>
-        <button
-          onClick={() => {
-            chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
-          }}
-          style={{
-            marginTop: '4px',
-            padding: '8px 20px',
-            fontSize: '13px',
-            fontWeight: 500,
-            fontFamily: 'Roboto, Arial, sans-serif',
-            color: '#ffffff',
-            background: 'var(--accent)',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-          }}
-        >
-          Sign in to start
-        </button>
-      </div>
-    );
-  }
-
-  // --- Signed in ---
   return (
     <div
       style={{
