@@ -110,7 +110,6 @@ export default function PricingPage() {
             <li className="flex items-start gap-2"><span className="text-green-500 mt-0.5">&#10003;</span> Download as .md or .txt</li>
             <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5 font-bold">&#10003;</span> Unlimited AI summaries</li>
             <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5 font-bold">&#10003;</span> Unlimited AI chat</li>
-            <li className="flex items-start gap-2"><span className="text-blue-500 mt-0.5 font-bold">&#10003;</span> Priority processing</li>
           </ul>
           {!isPro && (
             <button
