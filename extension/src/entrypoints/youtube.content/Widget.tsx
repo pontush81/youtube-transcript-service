@@ -1,75 +1,260 @@
-import { useState, useEffect } from 'preact/hooks';
+import { useState, useEffect, useCallback } from 'preact/hooks';
 import { TranscriptTab } from './tabs/TranscriptTab';
 import { SummaryTab } from './tabs/SummaryTab';
 import { ChatTab } from './tabs/ChatTab';
 import { SaveButton } from './SaveButton';
 import { getAuthState, type AuthState } from '../../lib/auth';
 
+type WidgetState = 'open' | 'minimized' | 'closed';
 type Tab = 'transcript' | 'summary' | 'chat';
+
+const STORAGE_KEY_STATE = 'widgetState';
+const STORAGE_KEY_TAB = 'activeTab';
 
 interface Props {
   videoId: string;
+  onOpen?: () => void;
+  onMinimize?: () => void;
+  onClose?: () => void;
 }
 
-export function Widget({ videoId }: Props) {
+export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
+  const [widgetState, setWidgetState] = useState<WidgetState>('open');
   const [activeTab, setActiveTab] = useState<Tab>('transcript');
-  const [collapsed, setCollapsed] = useState(false);
+  const [initialized, setInitialized] = useState(false);
   const [auth, setAuth] = useState<AuthState>({ isSignedIn: false, isPro: false, token: null });
 
+  // Load persisted state on mount
   useEffect(() => {
+    chrome.storage.local.get([STORAGE_KEY_STATE, STORAGE_KEY_TAB], (result) => {
+      const persisted = result[STORAGE_KEY_STATE] as WidgetState | undefined;
+      const persistedTab = result[STORAGE_KEY_TAB] as Tab | undefined;
+
+      if (persisted && ['open', 'minimized', 'closed'].includes(persisted)) {
+        setWidgetState(persisted);
+      }
+      if (persistedTab && ['transcript', 'summary', 'chat'].includes(persistedTab)) {
+        setActiveTab(persistedTab);
+      }
+
+      setInitialized(true);
+    });
+
     getAuthState().then(setAuth);
   }, []);
 
-  if (collapsed) {
+  // Fire callbacks when initialized and state is known
+  useEffect(() => {
+    if (!initialized) return;
+
+    if (widgetState === 'open') onOpen?.();
+    else if (widgetState === 'minimized') onMinimize?.();
+    else if (widgetState === 'closed') onClose?.();
+  }, [initialized, widgetState]);
+
+  // Persist active tab
+  useEffect(() => {
+    if (!initialized) return;
+    chrome.storage.local.set({ [STORAGE_KEY_TAB]: activeTab });
+  }, [activeTab, initialized]);
+
+  const changeState = useCallback((newState: WidgetState) => {
+    setWidgetState(newState);
+    chrome.storage.local.set({ [STORAGE_KEY_STATE]: newState });
+  }, []);
+
+  // Don't render anything until we've loaded persisted state
+  if (!initialized) return null;
+
+  // Closed: render nothing
+  if (widgetState === 'closed') return null;
+
+  // Minimized: slim bar
+  if (widgetState === 'minimized') {
     return (
-      <button
-        onClick={() => setCollapsed(false)}
-        class="mb-4 w-full rounded-lg border border-gray-200 bg-white p-2 text-left text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: '8px',
+          padding: '8px 12px',
+          marginBottom: '12px',
+          backgroundColor: 'var(--bg-primary)',
+          border: '1px solid var(--border)',
+          borderRadius: '12px',
+          cursor: 'pointer',
+          fontFamily: 'Roboto, Arial, sans-serif',
+          fontSize: '13px',
+          fontWeight: 500,
+          color: 'var(--text-primary)',
+          userSelect: 'none',
+        }}
+        onClick={() => changeState('open')}
+        title="Expand Transcript Tool"
       >
-        📋 Transcript Tool ▸
-      </button>
+        <span style={{ color: 'var(--accent)', fontSize: '12px' }}>&#9654;</span>
+        <span>Transcript Tool</span>
+      </div>
     );
   }
 
+  // Open: full widget
+  const tabs: { key: Tab; label: string }[] = [
+    { key: 'transcript', label: 'Transcript' },
+    { key: 'summary', label: 'Summary' },
+    { key: 'chat', label: 'Chat' },
+  ];
+
   return (
-    <div class="mb-4 rounded-lg border border-gray-200 bg-white shadow-sm">
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: 'calc(100vh - 100px)',
+        marginBottom: '12px',
+        backgroundColor: 'var(--bg-primary)',
+        border: '1px solid var(--border)',
+        borderRadius: '12px',
+        fontFamily: 'Roboto, Arial, sans-serif',
+        overflow: 'hidden',
+      }}
+    >
       {/* Header */}
-      <div class="flex items-center justify-between border-b border-gray-100 px-4 py-2">
-        <span class="text-sm font-semibold text-gray-900">Transcript Tool</span>
-        <button
-          onClick={() => setCollapsed(true)}
-          class="text-gray-400 hover:text-gray-600"
-          title="Minimize"
+      <div
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'space-between',
+          padding: '10px 16px',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
+        }}
+      >
+        <span
+          style={{
+            fontSize: '14px',
+            fontWeight: 600,
+            color: 'var(--text-primary)',
+          }}
         >
-          ▾
-        </button>
+          Transcript Tool
+        </span>
+        <div style={{ display: 'flex', gap: '4px' }}>
+          <button
+            onClick={() => changeState('minimized')}
+            title="Minimize"
+            style={{
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-secondary)',
+              fontSize: '16px',
+              cursor: 'pointer',
+              lineHeight: 1,
+              fontFamily: 'Roboto, Arial, sans-serif',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-hover)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            &#8722;
+          </button>
+          <button
+            onClick={() => changeState('closed')}
+            title="Close"
+            style={{
+              width: '28px',
+              height: '28px',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              border: 'none',
+              borderRadius: '8px',
+              backgroundColor: 'transparent',
+              color: 'var(--text-secondary)',
+              fontSize: '16px',
+              cursor: 'pointer',
+              lineHeight: 1,
+              fontFamily: 'Roboto, Arial, sans-serif',
+            }}
+            onMouseEnter={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--bg-hover)';
+            }}
+            onMouseLeave={(e) => {
+              (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+            }}
+          >
+            &#10005;
+          </button>
+        </div>
       </div>
 
       {/* Tabs */}
-      <div class="flex border-b border-gray-100">
-        {(['transcript', 'summary', 'chat'] as Tab[]).map((tab) => (
+      <div
+        style={{
+          display: 'flex',
+          borderBottom: '1px solid var(--border)',
+          flexShrink: 0,
+        }}
+      >
+        {tabs.map((tab) => (
           <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            class={`flex-1 px-3 py-2 text-xs font-medium capitalize ${
-              activeTab === tab
-                ? 'border-b-2 border-blue-600 text-blue-600'
-                : 'text-gray-500 hover:text-gray-700'
-            }`}
+            key={tab.key}
+            onClick={() => setActiveTab(tab.key)}
+            style={{
+              flex: 1,
+              padding: '10px 12px',
+              border: 'none',
+              borderBottom: activeTab === tab.key ? '2px solid var(--accent)' : '2px solid transparent',
+              backgroundColor: 'transparent',
+              color: activeTab === tab.key ? 'var(--accent)' : 'var(--text-secondary)',
+              fontSize: '12px',
+              fontWeight: activeTab === tab.key ? 600 : 400,
+              cursor: 'pointer',
+              fontFamily: 'Roboto, Arial, sans-serif',
+              transition: 'color 0.15s, border-color 0.15s',
+            }}
+            onMouseEnter={(e) => {
+              if (activeTab !== tab.key) {
+                (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+              }
+            }}
+            onMouseLeave={(e) => {
+              if (activeTab !== tab.key) {
+                (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+              }
+            }}
           >
-            {tab}
+            {tab.label}
           </button>
         ))}
       </div>
 
-      {/* Content */}
-      <div>
+      {/* Scrollable content area */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          minHeight: 0,
+        }}
+      >
         {activeTab === 'transcript' && <TranscriptTab videoId={videoId} />}
         {activeTab === 'summary' && <SummaryTab videoId={videoId} />}
         {activeTab === 'chat' && <ChatTab videoId={videoId} auth={auth} />}
       </div>
 
-      <SaveButton videoId={videoId} auth={auth} />
+      {/* Action bar (sticky bottom) */}
+      <div style={{ flexShrink: 0 }}>
+        <SaveButton videoId={videoId} auth={auth} />
+      </div>
     </div>
   );
 }
