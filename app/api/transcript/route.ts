@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube';
+import { extractVideoId, fetchTranscriptWithSegments, fetchVideoTitle } from '@/lib/youtube';
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
@@ -63,8 +63,11 @@ export async function POST(request: NextRequest) {
     }
 
     let transcript: string;
+    let segments: { text: string; offset: number; duration: number }[] = [];
     try {
-      transcript = await fetchTranscript(videoId);
+      const result = await fetchTranscriptWithSegments(videoId);
+      transcript = result.transcript;
+      segments = result.segments;
     } catch {
       return NextResponse.json(
         {
@@ -144,6 +147,7 @@ export async function POST(request: NextRequest) {
       title,
       downloadUrl,
       markdown,
+      segments,
       chunksCreated: embeddingResult.chunksCreated,
       embeddingStatus: embeddingResult.valid ? 'indexed' : 'skipped',
       embeddingReason: embeddingResult.reason || undefined,

@@ -6,7 +6,7 @@
  * Playlists: Requires YOUTUBE_API_KEY
  */
 
-import { fetchTranscript as fetchTranscriptSupadata } from './supadata';
+import { fetchTranscript as fetchTranscriptSupadata, type TranscriptResult } from './supadata';
 import {
   fetchVideoMetadata as fetchMetadataService,
   fetchVideoTitle as fetchTitleService,
@@ -131,6 +131,16 @@ export async function fetchTranscript(
 ): Promise<string> {
   const result = await fetchTranscriptSupadata(videoId, preferredLang);
   return result.transcript;
+}
+
+/**
+ * Fetch transcript with timestamped segments
+ */
+export async function fetchTranscriptWithSegments(
+  videoId: string,
+  preferredLang?: string
+): Promise<TranscriptResult> {
+  return fetchTranscriptSupadata(videoId, preferredLang);
 }
 
 /**
