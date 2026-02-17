@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
+import { auth, clerkClient } from '@clerk/nextjs/server';
+import { checkUsage, incrementUsage, getUserPlan } from '@/lib/usage';
 import { z } from 'zod';
 
 export const maxDuration = 30;
@@ -31,6 +33,29 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Daily usage gating (separate from IP rate limit above)
+  const { userId } = await auth();
+
+  let plan: 'free' | 'pro' = 'free';
+  if (userId) {
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    plan = getUserPlan(user.publicMetadata);
+  }
+
+  const usage = await checkUsage(userId, 'summary', plan);
+  if (!usage.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Daily summary limit reached. Upgrade to Pro for unlimited summaries.',
+        upgrade: true,
+        used: usage.used,
+        limit: usage.limit,
+      },
+      { status: 402 }
+    );
+  }
+
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'AI summarization not configured' }, { status: 503 });
@@ -57,6 +82,8 @@ export async function POST(request: NextRequest) {
     });
 
     const summary = completion.choices[0]?.message?.content || '';
+
+    await incrementUsage(userId, 'summary');
 
     return NextResponse.json({ summary });
   } catch (error) {
