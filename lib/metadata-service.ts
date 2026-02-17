@@ -101,7 +101,8 @@ function parseDuration(duration: string): number {
 async function fetchOEmbedMetadata(videoId: string): Promise<Partial<VideoMetadata>> {
   try {
     const response = await fetch(
-      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { signal: AbortSignal.timeout(10_000) }
     );
 
     if (!response.ok) {
@@ -162,7 +163,8 @@ async function fetchYouTubeApiMetadata(videoId: string): Promise<VideoMetadata |
   try {
     const response = await fetch(
       `https://www.googleapis.com/youtube/v3/videos?` +
-      `part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`
+      `part=snippet,contentDetails,statistics&id=${videoId}&key=${apiKey}`,
+      { signal: AbortSignal.timeout(10_000) }
     );
 
     if (!response.ok) {
@@ -233,7 +235,8 @@ export async function fetchVideoMetadata(videoId: string): Promise<VideoMetadata
 export async function fetchVideoTitle(videoId: string): Promise<string> {
   try {
     const response = await fetch(
-      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
+      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`,
+      { signal: AbortSignal.timeout(10_000) }
     );
     const data = await response.json();
     return data.title || `Video ${videoId}`;
@@ -281,7 +284,8 @@ export async function fetchPlaylistMetadata(
 
   const response = await fetch(
     `https://www.googleapis.com/youtube/v3/playlists?` +
-    `part=snippet,contentDetails&id=${playlistId}&key=${apiKey}`
+    `part=snippet,contentDetails&id=${playlistId}&key=${apiKey}`,
+    { signal: AbortSignal.timeout(10_000) }
   );
 
   if (!response.ok) {
@@ -344,7 +348,7 @@ export async function fetchPlaylistVideos(
       url.searchParams.set('pageToken', nextPageToken);
     }
 
-    const response = await fetch(url.toString());
+    const response = await fetch(url.toString(), { signal: AbortSignal.timeout(10_000) });
 
     if (!response.ok) {
       if (response.status === 404) {

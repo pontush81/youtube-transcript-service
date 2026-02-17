@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isValidBlobUrl } from '../validations';
+import { isValidBlobUrl, youtubeUrlSchema } from '../validations';
 
 describe('isValidBlobUrl', () => {
   it('accepts valid Vercel blob URLs', () => {
@@ -29,5 +29,25 @@ describe('isValidBlobUrl', () => {
     expect(isValidBlobUrl('https://169.254.169.254/metadata')).toBe(false);
     expect(isValidBlobUrl('https://localhost/test')).toBe(false);
     expect(isValidBlobUrl('https://127.0.0.1/test')).toBe(false);
+  });
+});
+
+describe('youtubeUrlSchema', () => {
+  it('accepts valid YouTube URLs', () => {
+    expect(youtubeUrlSchema.safeParse('https://www.youtube.com/watch?v=dQw4w9WgXcQ').success).toBe(true);
+    expect(youtubeUrlSchema.safeParse('https://youtu.be/dQw4w9WgXcQ').success).toBe(true);
+    expect(youtubeUrlSchema.safeParse('https://youtube.com/embed/dQw4w9WgXcQ').success).toBe(true);
+  });
+
+  it('accepts URLs with query params', () => {
+    expect(youtubeUrlSchema.safeParse('https://www.youtube.com/watch?v=dQw4w9WgXcQ&t=120').success).toBe(true);
+  });
+
+  it('rejects URLs with trailing invalid characters', () => {
+    expect(youtubeUrlSchema.safeParse('https://www.youtube.com/watch?v=dQw4w9WgXcQ/malicious').success).toBe(false);
+  });
+
+  it('rejects non-YouTube URLs', () => {
+    expect(youtubeUrlSchema.safeParse('https://evil.com/watch?v=dQw4w9WgXcQ').success).toBe(false);
   });
 });

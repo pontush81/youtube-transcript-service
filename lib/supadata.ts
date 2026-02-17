@@ -52,6 +52,7 @@ export async function fetchTranscript(
       headers: {
         'x-api-key': apiKey,
       },
+      signal: AbortSignal.timeout(30_000),
     }
   );
 
@@ -116,6 +117,7 @@ export async function hasTranscript(videoId: string): Promise<boolean> {
         headers: {
           'x-api-key': apiKey,
         },
+        signal: AbortSignal.timeout(15_000),
       }
     );
 
@@ -139,6 +141,7 @@ export async function getAvailableLanguages(videoId: string): Promise<string[]> 
         headers: {
           'x-api-key': apiKey,
         },
+        signal: AbortSignal.timeout(15_000),
       }
     );
 

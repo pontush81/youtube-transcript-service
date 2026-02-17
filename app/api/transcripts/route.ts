@@ -49,6 +49,8 @@ export async function GET(request: NextRequest) {
     const channelFilter = request.nextUrl.searchParams.get('channel');
     const categoryFilter = request.nextUrl.searchParams.get('category');
     const sortBy = request.nextUrl.searchParams.get('sort') || 'uploadedAt';
+    const limit = Math.min(parseInt(request.nextUrl.searchParams.get('limit') || '100', 10), 500);
+    const offset = Math.max(parseInt(request.nextUrl.searchParams.get('offset') || '0', 10), 0);
 
     // Run all data fetches in parallel
     const [userTranscriptsResult, cachedTitles, metadataResult, blobsResult] = await Promise.all([
@@ -211,19 +213,24 @@ export async function GET(request: NextRequest) {
       }))
       .sort((a, b) => b.videoCount - a.videoCount);
 
+    // Apply pagination
+    const total = transcripts.length;
+    const paginatedTranscripts = transcripts.slice(offset, offset + limit);
+
     return NextResponse.json(
       {
-        transcripts,
+        transcripts: paginatedTranscripts,
         channels,
         categories,
         isAuthenticated: !!userId,
         userTranscriptCount: userTranscriptIds.size,
+        pagination: { total, limit, offset },
       },
       {
         headers: {
           // Don't cache when authenticated (personalized content)
           'Cache-Control': userId
-            ? 'private, no-cache'
+            ? 'private, max-age=300'
             : 'public, s-maxage=60, stale-while-revalidate=300',
         },
       }

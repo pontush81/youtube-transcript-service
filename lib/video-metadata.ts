@@ -1,5 +1,5 @@
 import { sql } from '@/lib/db';
-import { fetchVideoMetadata, fetchVideoMetadataFallback, VideoMetadata } from '@/lib/youtube';
+import { fetchVideoMetadata, VideoMetadata } from '@/lib/youtube';
 
 /**
  * Save video metadata to the database
@@ -160,30 +160,8 @@ export async function fetchAndSaveVideoMetadata(
   videoId: string,
   transcriptLanguage?: string
 ): Promise<VideoMetadata> {
-  let metadata: VideoMetadata;
-
-  try {
-    // Try Supadata first (rich metadata)
-    metadata = await fetchVideoMetadata(videoId);
-  } catch {
-    // Fallback to oEmbed (basic metadata)
-    const fallback = await fetchVideoMetadataFallback(videoId);
-    metadata = {
-      videoId,
-      title: fallback.title || `Video ${videoId}`,
-      description: null,
-      durationSeconds: null,
-      channelId: null,
-      channelName: fallback.channelName || null,
-      thumbnailUrl: fallback.thumbnailUrl || null,
-      publishedAt: null,
-      viewCount: null,
-      likeCount: null,
-      tags: [],
-      categoryId: null,
-      categoryName: null,
-    };
-  }
+  // fetchVideoMetadata tries YouTube Data API first, then falls back to oEmbed
+  const metadata = await fetchVideoMetadata(videoId);
 
   // Save to database
   await saveVideoMetadata({ ...metadata, transcriptLanguage });

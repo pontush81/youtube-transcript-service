@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
 // YouTube URL/ID validation
-const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}/;
+const YOUTUBE_URL_REGEX = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/|v\/)|youtu\.be\/)[\w-]{11}([?&].*)?$/;
 const YOUTUBE_ID_REGEX = /^[\w-]{11}$/;
 
 // Trusted blob storage domains (SSRF protection)

@@ -159,32 +159,6 @@ export async function fetchVideoTitle(videoId: string): Promise<string> {
 }
 
 /**
- * Fallback metadata fetcher (oEmbed only)
- * For backwards compatibility
- */
-export async function fetchVideoMetadataFallback(
-  videoId: string
-): Promise<Partial<VideoMetadata>> {
-  try {
-    const response = await fetch(
-      `https://www.youtube.com/oembed?url=https://www.youtube.com/watch?v=${videoId}&format=json`
-    );
-    const data = await response.json();
-    return {
-      videoId,
-      title: data.title || `Video ${videoId}`,
-      channelName: data.author_name || null,
-      thumbnailUrl: data.thumbnail_url || null,
-    };
-  } catch {
-    return {
-      videoId,
-      title: `Video ${videoId}`,
-    };
-  }
-}
-
-/**
  * Fetch playlist metadata
  * Requires YOUTUBE_API_KEY environment variable
  */

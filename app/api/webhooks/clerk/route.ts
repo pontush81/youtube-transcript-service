@@ -4,7 +4,7 @@ import { WebhookEvent } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
 import { Resend } from 'resend';
 
-const ADMIN_EMAIL = 'pontus.hberg@gmail.com';
+const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pontus.hberg@gmail.com';
 
 function getResend() {
   if (!process.env.RESEND_API_KEY) return null;

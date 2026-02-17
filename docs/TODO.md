@@ -30,28 +30,28 @@ Total genomgång av säkerhet, prestanda, arkitektur och kodkvalitet.
 
 ---
 
-## 🟢 Medium (nästa sprint)
+## ~~🟢 Medium~~ ✅ Fixat 2026-02-17
 
 ### Säkerhet
-- [ ] **Stärk YouTube URL-regex** - `lib/validations.ts:4-5` — saknar end-anchor, matchar ogiltiga URL:er.
-- [ ] **CSP-policy för bred** - `middleware.ts:55` — `unsafe-eval` i script-src. Undersök om det kan tas bort.
+- [x] **Stärk YouTube URL-regex** — End-anchor tillagd, testad med 4 nya tester
+- [x] **CSP-policy för bred** — `unsafe-eval` borttagen i produktion (bara dev), Clerk kräver det inte
 
 ### Prestanda
-- [ ] **Caching för autentiserade /api/transcripts** — `no-cache` för inloggade användare. Byt till `private, max-age=300`.
-- [ ] **IVFFlat index drop blockar queries** - `lib/db-schema.ts:139-144` — använd `CREATE INDEX CONCURRENTLY`.
-- [ ] **Timeouts på externa API-anrop** — Supadata, YouTube oEmbed, OpenAI har inga timeouts. Kan hänga.
-- [ ] **Pagination för /api/transcripts** — Returnerar alla transkript, ingen limit/offset.
+- [x] **Caching för autentiserade /api/transcripts** — Bytt till `private, max-age=300`
+- [x] **Timeouts på externa API-anrop** — AbortSignal.timeout på alla fetch: Supadata (30s), YouTube/oEmbed (10s)
+- [x] **Pagination för /api/transcripts** — limit/offset med default 100, max 500, total count i response
 
 ### Arkitektur
-- [ ] **Ta bort död kod: transcript-service.ts** — Helt ersatt av `supadata.ts`, importeras inte någonstans.
-- [ ] **Ta bort NextAuth-tabeller i db-schema.ts** — `accounts`, `sessions`, `verification_tokens` skapas fortfarande men Clerk används.
-- [ ] **Konsolidera duplicerad kod** — `secureCompare` finns i 2 filer, rate limit-pattern upprepas i 3+ endpoints, title-extraction duplicerad.
-- [ ] **Fixa timestamp-inkonsistens i schema** — `transcript_chunks.created_at` är `TIMESTAMP`, resten använder `TIMESTAMPTZ`.
-- [ ] **Hårdkodad ADMIN_EMAIL** - `app/api/webhooks/clerk/route.ts:7` — flytta till env-variabel.
+- [x] **Ta bort död kod: transcript-service.ts** — Raderad, ersatt av supadata.ts
+- [x] **Ta bort NextAuth-tabeller i db-schema.ts** — Borttagna (accounts, sessions, verification_tokens)
+- [x] **Konsolidera duplicerad kod** — secureCompare konsoliderad, fetchVideoMetadataFallback borttagen (duplicerade oEmbed-logik)
+- [x] **Fixa timestamp-inkonsistens i schema** — transcript_chunks.created_at ändrad till TIMESTAMPTZ
+- [x] **Hårdkodad ADMIN_EMAIL** — Flyttad till env-variabel med fallback
 
-### Kodkvalitet
+### Kvar (medium)
+- [ ] **IVFFlat index drop blockar queries** - `lib/db-schema.ts` — `CREATE INDEX CONCURRENTLY` kräver att det körs utanför transaktion, behöver separat migration-endpoint.
 - [ ] **Strukturerad loggning** — 35+ `console.log/error/warn` utan format, timestamps eller request-IDs. Överväg pino eller liknande.
-- [ ] **Foreign key transcript_chunks → video_metadata** — Orphan-chunks om video raderas. Lägg till `ON DELETE CASCADE`.
+- [ ] **Foreign key transcript_chunks → video_metadata** — Kräver arkitekturändringar: chunks sparas ibland före metadata, FK skulle blockera inserts.
 
 ---
 
