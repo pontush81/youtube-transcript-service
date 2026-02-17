@@ -2,6 +2,8 @@ import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { searchTranscripts } from '@/lib/vector-search';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
+import { auth, clerkClient } from '@clerk/nextjs/server';
+import { checkUsage, incrementUsage, getUserPlan } from '@/lib/usage';
 import { z } from 'zod';
 
 export const maxDuration = 30;
@@ -27,6 +29,29 @@ export async function POST(request: NextRequest) {
     return NextResponse.json(
       { error: 'Too many requests. Please wait.', retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
       { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
+  // Daily usage gating (separate from IP rate limit above)
+  const { userId } = await auth();
+
+  let plan: 'free' | 'pro' = 'free';
+  if (userId) {
+    const client = await clerkClient();
+    const user = await client.users.getUser(userId);
+    plan = getUserPlan(user.publicMetadata);
+  }
+
+  const usage = await checkUsage(userId, 'chat', plan);
+  if (!usage.allowed) {
+    return NextResponse.json(
+      {
+        error: 'Daily chat limit reached. Upgrade to Pro for unlimited chat.',
+        upgrade: true,
+        used: usage.used,
+        limit: usage.limit,
+      },
+      { status: 402 }
     );
   }
 
@@ -72,6 +97,8 @@ export async function POST(request: NextRequest) {
     });
 
     const response = completion.choices[0]?.message?.content || '';
+
+    await incrementUsage(userId, 'chat');
 
     return NextResponse.json({ response });
   } catch (error) {
