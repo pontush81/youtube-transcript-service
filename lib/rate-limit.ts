@@ -151,12 +151,12 @@ export async function checkRateLimit(
       };
     }
 
-    // Allow single failures but warn
+    // Fail closed: block requests on Redis failure to prevent abuse
     return {
-      allowed: true,
-      remaining: 1,
+      allowed: false,
+      remaining: 0,
       resetAt: now + 60000,
-      limit: 30,
+      limit: 0,
     };
   }
 }

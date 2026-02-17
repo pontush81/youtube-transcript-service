@@ -4,18 +4,22 @@ import { list } from '@vercel/blob';
 import { sql } from '@/lib/db';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
-import { hasValidAdminKey } from '@/lib/admin';
+import { hasValidAdminKey, isUserAdmin } from '@/lib/admin';
 
 export const maxDuration = 300; // 5 minutes for backfill
 
 export async function POST(request: NextRequest) {
-  // Allow either Clerk auth or admin key
+  // Require admin access (admin key or Clerk admin role)
   const isAdmin = hasValidAdminKey(request);
 
   if (!isAdmin) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userIsAdmin = await isUserAdmin(userId);
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
   }
 
@@ -95,13 +99,17 @@ export async function POST(request: NextRequest) {
 
 // GET to check status
 export async function GET(request: NextRequest) {
-  // Allow either Clerk auth or admin key
+  // Require admin access (admin key or Clerk admin role)
   const isAdmin = hasValidAdminKey(request);
 
   if (!isAdmin) {
     const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+    const userIsAdmin = await isUserAdmin(userId);
+    if (!userIsAdmin) {
+      return NextResponse.json({ error: 'Admin access required' }, { status: 403 });
     }
   }
 

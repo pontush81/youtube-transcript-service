@@ -1,4 +1,4 @@
-import { sql } from '@/lib/db';
+import { sql, db } from '@/lib/db';
 import { getAIProvider } from '@/lib/ai/provider';
 import { chunkTranscript, validateTranscriptContent } from '@/lib/chunking';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
@@ -60,24 +60,34 @@ export async function saveTranscriptEmbeddings(params: SaveEmbeddingsParams): Pr
   // Generate embeddings in batch
   const embeddings = await provider.embedBatch(chunks.map(c => c.content));
 
-  // Delete existing chunks for this video (in case of re-import)
-  // Delete both with normalized ID and any legacy IDs
-  await sql`DELETE FROM transcript_chunks WHERE video_id = ${normalizedVideoId}`;
-  await sql`DELETE FROM transcript_chunks WHERE video_id LIKE ${normalizedVideoId + '%'}`;
+  // Use a transaction to ensure delete+insert is atomic (prevents data loss if insert fails)
+  const client = await db.connect();
+  try {
+    await client.sql`BEGIN`;
 
-  // Batch insert chunks using Promise.all for parallelism (within same connection pool)
-  // This is faster than sequential inserts while maintaining parameterized query safety
-  if (chunks.length > 0) {
-    await Promise.all(
-      chunks.map((chunk, i) => {
+    // Delete existing chunks for this video (in case of re-import)
+    await client.sql`DELETE FROM transcript_chunks WHERE video_id = ${normalizedVideoId}`;
+    await client.sql`DELETE FROM transcript_chunks WHERE video_id LIKE ${normalizedVideoId + '%'}`;
+
+    // Insert new chunks
+    if (chunks.length > 0) {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
         const embedding = embeddings[i];
         const embeddingStr = `[${embedding.join(',')}]`;
-        return sql`
+        await client.sql`
           INSERT INTO transcript_chunks (blob_url, video_id, video_title, chunk_index, content, timestamp_start, embedding)
           VALUES (${blobUrl}, ${normalizedVideoId}, ${videoTitle}, ${chunk.chunkIndex}, ${chunk.content}, ${chunk.timestampStart}, ${embeddingStr}::vector)
         `;
-      })
-    );
+      }
+    }
+
+    await client.sql`COMMIT`;
+  } catch (error) {
+    await client.sql`ROLLBACK`;
+    throw error;
+  } finally {
+    client.release();
   }
 
   return {
@@ -142,21 +152,33 @@ export async function saveWebContentEmbeddings(params: SaveWebEmbeddingsParams):
   // Generate embeddings in batch
   const embeddings = await provider.embedBatch(chunks.map(c => c.content));
 
-  // Delete existing chunks for this content
-  await sql`DELETE FROM transcript_chunks WHERE video_id = ${contentId}`;
+  // Use a transaction to ensure delete+insert is atomic
+  const client = await db.connect();
+  try {
+    await client.sql`BEGIN`;
 
-  // Insert chunks
-  if (chunks.length > 0) {
-    await Promise.all(
-      chunks.map((chunk, i) => {
+    // Delete existing chunks for this content
+    await client.sql`DELETE FROM transcript_chunks WHERE video_id = ${contentId}`;
+
+    // Insert chunks
+    if (chunks.length > 0) {
+      for (let i = 0; i < chunks.length; i++) {
+        const chunk = chunks[i];
         const embedding = embeddings[i];
         const embeddingStr = `[${embedding.join(',')}]`;
-        return sql`
+        await client.sql`
           INSERT INTO transcript_chunks (blob_url, video_id, video_title, chunk_index, content, timestamp_start, embedding)
           VALUES (${blobUrl}, ${contentId}, ${title}, ${chunk.chunkIndex}, ${chunk.content}, ${null}, ${embeddingStr}::vector)
         `;
-      })
-    );
+      }
+    }
+
+    await client.sql`COMMIT`;
+  } catch (error) {
+    await client.sql`ROLLBACK`;
+    throw error;
+  } finally {
+    client.release();
   }
 
   return {

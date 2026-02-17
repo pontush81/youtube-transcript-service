@@ -1,5 +1,5 @@
 import { auth, clerkClient } from '@clerk/nextjs/server';
-import { timingSafeEqual } from 'crypto';
+import { createHash, timingSafeEqual } from 'crypto';
 
 export type UserRole = 'admin' | 'user';
 
@@ -10,17 +10,15 @@ export interface UserWithRole {
 }
 
 /**
- * Timing-safe string comparison to prevent timing attacks
+ * Timing-safe string comparison to prevent timing attacks.
+ * Uses SHA-256 hashing to normalize buffer lengths before comparison,
+ * preventing length-based timing leaks.
  */
 export function secureCompare(a: string, b: string): boolean {
   if (typeof a !== 'string' || typeof b !== 'string') return false;
-  const aBuffer = Buffer.from(a);
-  const bBuffer = Buffer.from(b);
-  if (aBuffer.length !== bBuffer.length) {
-    timingSafeEqual(aBuffer, aBuffer);
-    return false;
-  }
-  return timingSafeEqual(aBuffer, bBuffer);
+  const aHash = createHash('sha256').update(a).digest();
+  const bHash = createHash('sha256').update(b).digest();
+  return timingSafeEqual(aHash, bHash);
 }
 
 /**

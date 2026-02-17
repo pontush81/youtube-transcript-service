@@ -1,28 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { del, list } from '@vercel/blob';
-import { timingSafeEqual } from 'crypto';
 import { z } from 'zod';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
-
-// Timing-safe string comparison to prevent timing attacks
-function secureCompare(a: string, b: string): boolean {
-  if (typeof a !== 'string' || typeof b !== 'string') {
-    return false;
-  }
-
-  const aBuffer = Buffer.from(a);
-  const bBuffer = Buffer.from(b);
-
-  // If lengths differ, compare against itself to maintain constant time
-  if (aBuffer.length !== bBuffer.length) {
-    timingSafeEqual(aBuffer, aBuffer);
-    return false;
-  }
-
-  return timingSafeEqual(aBuffer, bBuffer);
-}
+import { secureCompare } from '@/lib/admin';
 
 // Schema for single delete (legacy support)
 const singleDeleteSchema = z.object({

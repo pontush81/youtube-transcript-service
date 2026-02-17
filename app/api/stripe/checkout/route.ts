@@ -1,8 +1,7 @@
 import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
-
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!);
+import { getStripeSecretKey, getStripePricePro } from '@/lib/env';
 
 export async function POST() {
   const { userId } = await auth();
@@ -11,9 +10,10 @@ export async function POST() {
   }
 
   try {
+    const stripe = new Stripe(getStripeSecretKey());
     const session = await stripe.checkout.sessions.create({
       mode: 'subscription',
-      line_items: [{ price: process.env.STRIPE_PRICE_PRO, quantity: 1 }],
+      line_items: [{ price: getStripePricePro(), quantity: 1 }],
       success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://youtube-transcript-service-two.vercel.app'}/pricing?success=true`,
       cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://youtube-transcript-service-two.vercel.app'}/pricing?canceled=true`,
       metadata: { clerkUserId: userId },
