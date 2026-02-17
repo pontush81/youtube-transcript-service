@@ -9,6 +9,7 @@ export default defineContentScript({
 
   async main(ctx) {
     let ui: Awaited<ReturnType<typeof createShadowRootUi>> | null = null;
+    let darkModeObserver: MutationObserver | null = null;
 
     function getVideoId(url: string): string | null {
       const match = url.match(/[?&]v=([^&]+)/);
@@ -29,11 +30,55 @@ export default defineContentScript({
       });
     }
 
+    // Dark mode: watch YouTube's <html dark> attribute
+    function setupDarkModeObserver(shadowHost: Element) {
+      const html = document.documentElement;
+
+      function updateTheme() {
+        const isDark = html.hasAttribute('dark');
+        if (isDark) {
+          shadowHost.classList.add('dark');
+        } else {
+          shadowHost.classList.remove('dark');
+        }
+      }
+
+      updateTheme();
+
+      const observer = new MutationObserver(updateTheme);
+      observer.observe(html, { attributes: true, attributeFilter: ['dark'] });
+      return observer;
+    }
+
+    // Sidebar takeover: hide/show YouTube's recommendation content
+    function hideSecondaryContent() {
+      const secondary = document.querySelector('#secondary');
+      if (!secondary) return;
+      Array.from(secondary.children).forEach((child) => {
+        if (child.tagName?.toLowerCase() !== 'transcript-widget') {
+          (child as HTMLElement).style.display = 'none';
+        }
+      });
+    }
+
+    function showSecondaryContent() {
+      const secondary = document.querySelector('#secondary');
+      if (!secondary) return;
+      Array.from(secondary.children).forEach((child) => {
+        if (child.tagName?.toLowerCase() !== 'transcript-widget') {
+          (child as HTMLElement).style.display = '';
+        }
+      });
+    }
+
     async function handleVideoPage() {
       const videoId = getVideoId(window.location.href);
       if (!videoId) {
+        showSecondaryContent();
         ui?.remove();
         ui = null;
+        darkModeObserver?.disconnect();
+        darkModeObserver = null;
         return;
       }
 
@@ -41,16 +86,31 @@ export default defineContentScript({
       if (!anchor) return;
 
       ui?.remove();
+      darkModeObserver?.disconnect();
 
       ui = await createShadowRootUi(ctx, {
         name: 'transcript-widget',
         position: 'inline',
         anchor: '#secondary',
         append: 'first',
-        onMount(container) {
+        onMount(container, _shadow, shadowHost) {
+          darkModeObserver = setupDarkModeObserver(shadowHost);
+
           const wrapper = document.createElement('div');
           container.append(wrapper);
-          render(<Widget videoId={videoId} />, wrapper);
+          render(
+            <Widget
+              videoId={videoId}
+              onOpen={hideSecondaryContent}
+              onMinimize={showSecondaryContent}
+              onClose={() => {
+                showSecondaryContent();
+                ui?.remove();
+                ui = null;
+              }}
+            />,
+            wrapper,
+          );
           return wrapper;
         },
         onRemove(wrapper) {
@@ -59,6 +119,7 @@ export default defineContentScript({
       });
 
       ui.mount();
+      hideSecondaryContent();
     }
 
     await handleVideoPage();

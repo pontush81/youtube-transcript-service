@@ -1,1 +1,68 @@
 @import "tailwindcss";
+
+/* YouTube-native theming via CSS custom properties */
+:host {
+  display: block !important;
+  font-family: "Roboto", "Arial", sans-serif;
+
+  /* Light mode (default) */
+  --bg-primary: #ffffff;
+  --bg-secondary: #f2f2f2;
+  --bg-hover: #f2f2f2;
+  --bg-active: #def1ff;
+  --text-primary: #0f0f0f;
+  --text-secondary: #606060;
+  --text-link: #065fd4;
+  --border: #e5e5e5;
+  --accent: #065fd4;
+  --accent-hover: #0450b5;
+  --accent-light: #def1ff;
+  --error: #cc0000;
+  --success: #2ba640;
+
+  /* Chat bubbles */
+  --bubble-user: #065fd4;
+  --bubble-user-text: #ffffff;
+  --bubble-ai: #f2f2f2;
+  --bubble-ai-text: #0f0f0f;
+
+  /* Skeleton loader */
+  --skeleton-base: #e5e5e5;
+  --skeleton-shine: #f2f2f2;
+}
+
+:host(.dark) {
+  --bg-primary: #0f0f0f;
+  --bg-secondary: #272727;
+  --bg-hover: #3f3f3f;
+  --bg-active: #263850;
+  --text-primary: #f1f1f1;
+  --text-secondary: #aaaaaa;
+  --text-link: #3ea6ff;
+  --border: #3f3f3f;
+  --accent: #3ea6ff;
+  --accent-hover: #67b8ff;
+  --accent-light: #263850;
+  --error: #ff4444;
+  --success: #4caf50;
+
+  --bubble-user: #3ea6ff;
+  --bubble-user-text: #0f0f0f;
+  --bubble-ai: #272727;
+  --bubble-ai-text: #f1f1f1;
+
+  --skeleton-base: #3f3f3f;
+  --skeleton-shine: #4f4f4f;
+}
+
+/* Skeleton animation */
+@keyframes skeleton-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 1; }
+}
+
+.skeleton {
+  background: var(--skeleton-base);
+  border-radius: 4px;
+  animation: skeleton-pulse 1.5s ease-in-out infinite;
+}
