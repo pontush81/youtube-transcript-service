@@ -6,29 +6,30 @@ interface TranscriptSegment {
   text: string;
 }
 
+interface ApiSegment {
+  text: string;
+  offset: number;
+  duration: number;
+}
+
 interface Props {
   videoId: string;
 }
 
-function parseTranscriptMarkdown(markdown: string): TranscriptSegment[] {
-  const segments: TranscriptSegment[] = [];
-  const lines = markdown.split('\n');
+function formatTimestamp(seconds: number): string {
+  const h = Math.floor(seconds / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  const s = Math.floor(seconds % 60);
+  if (h > 0) return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  return `${m}:${String(s).padStart(2, '0')}`;
+}
 
-  for (const line of lines) {
-    const match = line.match(/\*\*\[(\d{1,2}:\d{2}(?::\d{2})?)\]\*\*\s*(.*)/);
-    if (match) {
-      const timestamp = match[1];
-      const text = match[2];
-      const parts = timestamp.split(':').map(Number);
-      const seconds =
-        parts.length === 3
-          ? parts[0] * 3600 + parts[1] * 60 + parts[2]
-          : parts[0] * 60 + parts[1];
-      segments.push({ timestamp, seconds, text });
-    }
-  }
-
-  return segments;
+function apiSegmentsToTranscript(apiSegments: ApiSegment[]): TranscriptSegment[] {
+  return apiSegments.map((seg) => ({
+    timestamp: formatTimestamp(seg.offset),
+    seconds: seg.offset,
+    text: seg.text,
+  }));
 }
 
 function seekVideo(seconds: number) {
@@ -108,7 +109,9 @@ export function TranscriptTab({ videoId }: Props) {
       });
 
       if (response.success) {
-        setSegments(parseTranscriptMarkdown(response.data.markdown));
+        if (response.data.segments && response.data.segments.length > 0) {
+          setSegments(apiSegmentsToTranscript(response.data.segments));
+        }
         setLoaded(true);
       } else {
         setError(response.error || 'Failed to fetch transcript');

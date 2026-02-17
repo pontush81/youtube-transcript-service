@@ -5,6 +5,7 @@ interface TranscriptResponse {
   markdown: string;
   title: string;
   videoId: string;
+  segments?: { text: string; offset: number; duration: number }[];
 }
 
 interface ChatMessage {
