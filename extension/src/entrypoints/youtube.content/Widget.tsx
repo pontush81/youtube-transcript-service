@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
 import { TranscriptTab, type TranscriptData } from './tabs/TranscriptTab';
 import { SummaryTab } from './tabs/SummaryTab';
-import { ChatTab } from './tabs/ChatTab';
+import { ChatTab, type ChatMessage } from './tabs/ChatTab';
 import { DownloadBar } from './DownloadBar';
 
 type WidgetState = 'open' | 'minimized' | 'closed';
@@ -22,6 +22,8 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
   const [activeTab, setActiveTab] = useState<Tab>('transcript');
   const [initialized, setInitialized] = useState(false);
   const [transcriptData, setTranscriptData] = useState<TranscriptData | null>(null);
+  const [summaryText, setSummaryText] = useState<string | null>(null);
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
 
   // Load persisted state on mount
   useEffect(() => {
@@ -244,12 +246,18 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
         }}
       >
         {activeTab === 'transcript' && <TranscriptTab videoId={videoId} onTranscriptLoaded={setTranscriptData} />}
-        {activeTab === 'summary' && <SummaryTab videoId={videoId} />}
-        {activeTab === 'chat' && <ChatTab videoId={videoId} />}
+        {activeTab === 'summary' && <SummaryTab videoId={videoId} onSummaryLoaded={(s) => setSummaryText(s || null)} />}
+        {activeTab === 'chat' && <ChatTab videoId={videoId} onMessagesChanged={setChatMessages} />}
       </div>
 
-      {/* Download bar (sticky bottom, visible when transcript loaded) */}
-      <DownloadBar videoId={videoId} transcriptData={transcriptData} />
+      {/* Download bar (context-aware based on active tab) */}
+      <DownloadBar
+        videoId={videoId}
+        activeTab={activeTab}
+        transcriptData={transcriptData}
+        summaryText={summaryText}
+        chatMessages={chatMessages}
+      />
     </div>
   );
 }

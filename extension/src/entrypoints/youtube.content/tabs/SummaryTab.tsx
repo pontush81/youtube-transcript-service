@@ -2,6 +2,7 @@ import { useState, useEffect } from 'preact/hooks';
 
 interface Props {
   videoId: string;
+  onSummaryLoaded?: (summary: string) => void;
 }
 
 function escapeHtml(text: string): string {
@@ -119,7 +120,7 @@ function SkeletonLoader() {
   );
 }
 
-export function SummaryTab({ videoId }: Props) {
+export function SummaryTab({ videoId, onSummaryLoaded }: Props) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -128,7 +129,10 @@ export function SummaryTab({ videoId }: Props) {
   useEffect(() => {
     chrome.storage.local.get(`summary_${videoId}`, (result) => {
       const cached = result[`summary_${videoId}`];
-      if (cached) setSummary(cached);
+      if (cached) {
+        setSummary(cached);
+        onSummaryLoaded?.(cached);
+      }
     });
   }, [videoId]);
 
@@ -161,7 +165,7 @@ export function SummaryTab({ videoId }: Props) {
 
       if (summaryRes.success) {
         setSummary(summaryRes.data.summary);
-        // Cache locally
+        onSummaryLoaded?.(summaryRes.data.summary);
         chrome.storage.local.set({ [`summary_${videoId}`]: summaryRes.data.summary });
       } else {
         setError(summaryRes.error || 'Summary generation failed');
@@ -319,6 +323,7 @@ export function SummaryTab({ videoId }: Props) {
         <button
           onClick={() => {
             setSummary(null);
+            onSummaryLoaded?.('');
             chrome.storage.local.remove(`summary_${videoId}`);
           }}
           style={{

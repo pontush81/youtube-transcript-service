@@ -1,12 +1,13 @@
 import { useState, useRef, useEffect } from 'preact/hooks';
 
-interface ChatMessage {
+export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
 }
 
 interface Props {
   videoId: string;
+  onMessagesChanged?: (messages: ChatMessage[]) => void;
 }
 
 const SUGGESTED_QUESTIONS = [
@@ -20,7 +21,7 @@ function stopYouTubeShortcuts(e: Event) {
   e.stopPropagation();
 }
 
-export function ChatTab({ videoId }: Props) {
+export function ChatTab({ videoId, onMessagesChanged }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
@@ -33,6 +34,11 @@ export function ChatTab({ videoId }: Props) {
       container.scrollTop = container.scrollHeight;
     }
   }, [messages, loading]);
+
+  // Notify parent of message changes
+  useEffect(() => {
+    if (messages.length > 0) onMessagesChanged?.(messages);
+  }, [messages]);
 
   async function sendMessage(text?: string) {
     const messageText = text ?? input.trim();
