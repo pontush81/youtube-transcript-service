@@ -3,7 +3,6 @@ import { TranscriptTab } from './tabs/TranscriptTab';
 import { SummaryTab } from './tabs/SummaryTab';
 import { ChatTab } from './tabs/ChatTab';
 import { SaveButton } from './SaveButton';
-import { getAuthState, type AuthState } from '../../lib/auth';
 
 type WidgetState = 'open' | 'minimized' | 'closed';
 type Tab = 'transcript' | 'summary' | 'chat';
@@ -22,8 +21,6 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
   const [widgetState, setWidgetState] = useState<WidgetState>('open');
   const [activeTab, setActiveTab] = useState<Tab>('transcript');
   const [initialized, setInitialized] = useState(false);
-  const [auth, setAuth] = useState<AuthState>({ isSignedIn: false, isPro: false, token: null });
-
   // Load persisted state on mount
   useEffect(() => {
     chrome.storage.local.get([STORAGE_KEY_STATE, STORAGE_KEY_TAB], (result) => {
@@ -39,8 +36,6 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
 
       setInitialized(true);
     });
-
-    getAuthState().then(setAuth);
   }, []);
 
   // Fire callbacks when initialized and state is known
@@ -253,7 +248,7 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
 
       {/* Action bar (sticky bottom) */}
       <div style={{ flexShrink: 0 }}>
-        <SaveButton videoId={videoId} auth={auth} />
+        <SaveButton videoId={videoId} />
       </div>
     </div>
   );
