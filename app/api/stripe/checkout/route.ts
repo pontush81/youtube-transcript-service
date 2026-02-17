@@ -10,14 +10,19 @@ export async function POST() {
     return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
   }
 
-  const session = await stripe.checkout.sessions.create({
-    mode: 'subscription',
-    line_items: [{ price: process.env.STRIPE_PRICE_PRO, quantity: 1 }],
-    success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://youtube-transcript-service-two.vercel.app'}/pricing?success=true`,
-    cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://youtube-transcript-service-two.vercel.app'}/pricing?canceled=true`,
-    metadata: { clerkUserId: userId },
-    subscription_data: { metadata: { clerkUserId: userId } },
-  });
+  try {
+    const session = await stripe.checkout.sessions.create({
+      mode: 'subscription',
+      line_items: [{ price: process.env.STRIPE_PRICE_PRO, quantity: 1 }],
+      success_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://youtube-transcript-service-two.vercel.app'}/pricing?success=true`,
+      cancel_url: `${process.env.NEXT_PUBLIC_APP_URL || 'https://youtube-transcript-service-two.vercel.app'}/pricing?canceled=true`,
+      metadata: { clerkUserId: userId },
+      subscription_data: { metadata: { clerkUserId: userId } },
+    });
 
-  return NextResponse.json({ url: session.url });
+    return NextResponse.json({ url: session.url });
+  } catch (error) {
+    console.error('Stripe checkout error:', error);
+    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
+  }
 }
