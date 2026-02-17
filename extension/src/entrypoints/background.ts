@@ -1,4 +1,4 @@
-import { fetchTranscript, fetchSummary, saveToLibrary, chatWithVideo } from '../lib/api';
+import { fetchTranscript, fetchSummary, chatWithVideo } from '../lib/api';
 
 export default defineBackground(() => {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
@@ -18,10 +18,6 @@ export default defineBackground(() => {
       }
       case 'SUMMARIZE': {
         const data = await fetchSummary(message.markdown);
-        return { success: true, data };
-      }
-      case 'SAVE_TO_LIBRARY': {
-        const data = await saveToLibrary(message.url);
         return { success: true, data };
       }
       case 'CHAT': {
