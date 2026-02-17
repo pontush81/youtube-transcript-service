@@ -10,34 +10,6 @@ export function SaveButton({ videoId, auth }: Props) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
 
-  if (!auth.isSignedIn) {
-    return (
-      <div class="border-t border-gray-100 px-4 py-3">
-        <p class="text-center text-xs text-gray-500">
-          Sign in to save to your library
-        </p>
-      </div>
-    );
-  }
-
-  if (!auth.isPro) {
-    return (
-      <div class="border-t border-gray-100 px-4 py-3">
-        <button class="w-full rounded-lg border border-blue-200 bg-blue-50 px-4 py-2 text-sm font-medium text-blue-700 hover:bg-blue-100">
-          Upgrade to Pro to save
-        </button>
-      </div>
-    );
-  }
-
-  if (saved) {
-    return (
-      <div class="border-t border-gray-100 px-4 py-3">
-        <div class="text-center text-sm text-green-600">Saved to library</div>
-      </div>
-    );
-  }
-
   async function handleSave() {
     setSaving(true);
     try {
@@ -59,12 +31,73 @@ export function SaveButton({ videoId, auth }: Props) {
     }
   }
 
+  const containerStyle: Record<string, string> = {
+    padding: '10px 16px',
+    borderTop: '1px solid var(--border)',
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexShrink: '0',
+  };
+
+  const buttonStyle: Record<string, string> = {
+    padding: '8px 16px',
+    borderRadius: '8px',
+    fontSize: '13px',
+    fontWeight: '500',
+    fontFamily: 'Roboto, sans-serif',
+    border: 'none',
+    cursor: 'pointer',
+    width: '100%',
+    backgroundColor: 'var(--accent)',
+    color: '#fff',
+  };
+
+  // Not signed in
+  if (!auth.isSignedIn) {
+    return (
+      <div style={containerStyle}>
+        <span
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
+            fontFamily: 'Roboto, sans-serif',
+          }}
+        >
+          Sign in to save to your library
+        </span>
+      </div>
+    );
+  }
+
+  // Saved
+  if (saved) {
+    return (
+      <div style={containerStyle}>
+        <span
+          style={{
+            fontSize: '13px',
+            fontWeight: '500',
+            color: 'var(--success)',
+            fontFamily: 'Roboto, sans-serif',
+          }}
+        >
+          Saved to library
+        </span>
+      </div>
+    );
+  }
+
+  // Saving or ready to save
   return (
-    <div class="border-t border-gray-100 px-4 py-3">
+    <div style={containerStyle}>
       <button
         onClick={handleSave}
         disabled={saving}
-        class="w-full rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+        style={{
+          ...buttonStyle,
+          ...(saving ? { opacity: '0.5', cursor: 'default' } : {}),
+        }}
       >
         {saving ? 'Saving...' : 'Save to library'}
       </button>

@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from 'preact/hooks';
+import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks';
 
 interface TranscriptSegment {
   timestamp: string;
@@ -39,14 +39,46 @@ function seekVideo(seconds: number) {
   }
 }
 
+function highlightMatch(text: string, query: string): preact.JSX.Element {
+  if (!query) return <>{text}</>;
+
+  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(regex);
+
+  return (
+    <>
+      {parts.map((part, i) =>
+        regex.test(part) ? (
+          <span
+            key={i}
+            style={{
+              background: 'var(--accent-light)',
+              color: 'var(--accent)',
+              borderRadius: '2px',
+              padding: '0 2px',
+              fontWeight: 600,
+            }}
+          >
+            {part}
+          </span>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 export function TranscriptTab({ videoId }: Props) {
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
-  const [rawMarkdown, setRawMarkdown] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState(false);
   const [currentTime, setCurrentTime] = useState(0);
-  const containerRef = useRef<HTMLDivElement>(null);
+  const [searchQuery, setSearchQuery] = useState('');
+  const activeSegmentRef = useRef<HTMLDivElement>(null);
 
+  // Track video time
   useEffect(() => {
     const video = document.querySelector('video');
     if (!video) return;
@@ -56,7 +88,14 @@ export function TranscriptTab({ videoId }: Props) {
     return () => video.removeEventListener('timeupdate', onTimeUpdate);
   }, []);
 
-  async function loadTranscript() {
+  // Auto-scroll active segment into view
+  useEffect(() => {
+    if (activeSegmentRef.current && !searchQuery) {
+      activeSegmentRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    }
+  }, [currentTime, searchQuery]);
+
+  const loadTranscript = useCallback(async () => {
     setLoading(true);
     setError(null);
 
@@ -69,8 +108,8 @@ export function TranscriptTab({ videoId }: Props) {
       });
 
       if (response.success) {
-        setRawMarkdown(response.data.markdown);
         setSegments(parseTranscriptMarkdown(response.data.markdown));
+        setLoaded(true);
       } else {
         setError(response.error || 'Failed to fetch transcript');
       }
@@ -79,58 +118,289 @@ export function TranscriptTab({ videoId }: Props) {
     } finally {
       setLoading(false);
     }
-  }
-
-  useEffect(() => {
-    loadTranscript();
   }, [videoId]);
 
-  function copyTranscript() {
-    navigator.clipboard.writeText(rawMarkdown);
+  const filteredSegments = useMemo(() => {
+    if (!searchQuery) return segments;
+    const q = searchQuery.toLowerCase();
+    return segments.filter((seg) => seg.text.toLowerCase().includes(q));
+  }, [segments, searchQuery]);
+
+  const currentIndex = useMemo(() => {
+    if (searchQuery) return -1;
+    return segments.findLastIndex((s) => s.seconds <= currentTime);
+  }, [segments, currentTime, searchQuery]);
+
+  // --- Initial CTA state ---
+  if (!loaded && !loading && !error) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '32px 16px',
+          gap: '12px',
+        }}
+      >
+        <p
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+            lineHeight: '18px',
+            margin: 0,
+          }}
+        >
+          Load the transcript to read along, search, and jump to any moment.
+        </p>
+        <button
+          onClick={loadTranscript}
+          style={{
+            background: 'var(--accent)',
+            color: '#ffffff',
+            border: 'none',
+            borderRadius: '18px',
+            padding: '8px 20px',
+            fontSize: '14px',
+            fontWeight: 500,
+            fontFamily: 'Roboto, Arial, sans-serif',
+            cursor: 'pointer',
+          }}
+        >
+          Load transcript
+        </button>
+      </div>
+    );
   }
 
+  // --- Loading skeleton ---
   if (loading) {
-    return <div class="py-8 text-center text-sm text-gray-500">Loading transcript...</div>;
+    return (
+      <div style={{ padding: '12px 0' }}>
+        {Array.from({ length: 8 }).map((_, i) => (
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              alignItems: 'flex-start',
+              gap: '8px',
+              padding: '8px 12px',
+            }}
+          >
+            <div
+              className="skeleton"
+              style={{
+                width: '48px',
+                height: '14px',
+                flexShrink: 0,
+                marginTop: '1px',
+              }}
+            />
+            <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              <div
+                className="skeleton"
+                style={{
+                  width: `${60 + (i % 3) * 15}%`,
+                  height: '14px',
+                }}
+              />
+              {i % 2 === 0 && (
+                <div
+                  className="skeleton"
+                  style={{
+                    width: `${40 + (i % 4) * 10}%`,
+                    height: '14px',
+                  }}
+                />
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
+    );
   }
 
+  // --- Error state ---
   if (error) {
     return (
-      <div class="py-4 px-4">
-        <p class="mb-2 text-sm text-red-600">{error}</p>
-        <button onClick={loadTranscript} class="text-sm text-blue-600 hover:underline">
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          justifyContent: 'center',
+          padding: '32px 16px',
+          gap: '12px',
+        }}
+      >
+        <p
+          style={{
+            fontSize: '13px',
+            color: 'var(--error)',
+            textAlign: 'center',
+            margin: 0,
+            lineHeight: '18px',
+          }}
+        >
+          {error}
+        </p>
+        <button
+          onClick={loadTranscript}
+          style={{
+            background: 'none',
+            border: '1px solid var(--border)',
+            borderRadius: '18px',
+            padding: '6px 16px',
+            fontSize: '13px',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: 'var(--accent)',
+            cursor: 'pointer',
+          }}
+        >
           Try again
         </button>
       </div>
     );
   }
 
+  // --- Empty state ---
   if (segments.length === 0) {
-    return <div class="py-8 text-center text-sm text-gray-500">No transcript available</div>;
+    return (
+      <div
+        style={{
+          padding: '32px 16px',
+          textAlign: 'center',
+          fontSize: '13px',
+          color: 'var(--text-secondary)',
+        }}
+      >
+        No transcript available for this video.
+      </div>
+    );
   }
 
-  const currentIndex = segments.findLastIndex((s) => s.seconds <= currentTime);
-
+  // --- Loaded: search + segment list ---
   return (
-    <div>
-      <div ref={containerRef} class="max-h-96 overflow-y-auto">
-        {segments.map((seg, i) => (
-          <div
-            key={i}
-            class={`cursor-pointer border-l-2 px-3 py-2 text-sm hover:bg-gray-50 ${
-              i === currentIndex ? 'border-blue-600 bg-blue-50' : 'border-transparent'
-            }`}
-            onClick={() => seekVideo(seg.seconds)}
-          >
-            <span class="mr-2 font-mono text-xs text-blue-600">{seg.timestamp}</span>
-            <span class="text-gray-700">{seg.text}</span>
-          </div>
-        ))}
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+      {/* Search input */}
+      <div
+        style={{
+          padding: '8px 12px',
+          borderBottom: '1px solid var(--border)',
+        }}
+      >
+        <input
+          type="text"
+          placeholder="Search transcript..."
+          value={searchQuery}
+          onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+          style={{
+            width: '100%',
+            padding: '6px 10px',
+            fontSize: '13px',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            border: '1px solid var(--border)',
+            borderRadius: '4px',
+            background: 'var(--bg-primary)',
+            color: 'var(--text-primary)',
+            outline: 'none',
+            boxSizing: 'border-box',
+          }}
+        />
       </div>
 
-      <div class="flex gap-2 border-t border-gray-100 px-3 py-2">
-        <button onClick={copyTranscript} class="text-xs text-gray-500 hover:text-gray-700">
-          Copy transcript
-        </button>
+      {/* Search results count */}
+      {searchQuery && (
+        <div
+          style={{
+            padding: '4px 12px',
+            fontSize: '11px',
+            color: 'var(--text-secondary)',
+            borderBottom: '1px solid var(--border)',
+          }}
+        >
+          {filteredSegments.length} result{filteredSegments.length !== 1 ? 's' : ''} found
+        </div>
+      )}
+
+      {/* Segment list */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          minHeight: 0,
+        }}
+      >
+        {filteredSegments.length === 0 && searchQuery ? (
+          <div
+            style={{
+              padding: '24px 16px',
+              textAlign: 'center',
+              fontSize: '13px',
+              color: 'var(--text-secondary)',
+            }}
+          >
+            No matching segments found.
+          </div>
+        ) : (
+          filteredSegments.map((seg, i) => {
+            const isActive = !searchQuery && segments.indexOf(seg) === currentIndex;
+            return (
+              <div
+                key={`${seg.seconds}-${i}`}
+                ref={isActive ? activeSegmentRef : undefined}
+                onClick={() => seekVideo(seg.seconds)}
+                style={{
+                  display: 'flex',
+                  alignItems: 'flex-start',
+                  gap: '8px',
+                  padding: '6px 12px',
+                  borderLeft: isActive
+                    ? '3px solid var(--accent)'
+                    : '3px solid transparent',
+                  background: isActive ? 'var(--accent-light)' : 'transparent',
+                  cursor: 'pointer',
+                  transition: 'background 0.15s ease',
+                }}
+                onMouseEnter={(e) => {
+                  if (!isActive) {
+                    (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-hover)';
+                  }
+                }}
+                onMouseLeave={(e) => {
+                  (e.currentTarget as HTMLDivElement).style.background = isActive
+                    ? 'var(--accent-light)'
+                    : 'transparent';
+                }}
+              >
+                <span
+                  style={{
+                    fontFamily: 'Roboto Mono, monospace',
+                    fontSize: '12px',
+                    color: 'var(--accent)',
+                    flexShrink: 0,
+                    marginTop: '1px',
+                    lineHeight: '18px',
+                  }}
+                >
+                  {seg.timestamp}
+                </span>
+                <span
+                  style={{
+                    fontSize: '13px',
+                    color: 'var(--text-primary)',
+                    lineHeight: '18px',
+                    wordBreak: 'break-word',
+                  }}
+                >
+                  {searchQuery ? highlightMatch(seg.text, searchQuery) : seg.text}
+                </span>
+              </div>
+            );
+          })
+        )}
       </div>
     </div>
   );

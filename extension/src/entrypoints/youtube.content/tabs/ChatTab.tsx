@@ -1,4 +1,4 @@
-import { useState } from 'preact/hooks';
+import { useState, useRef, useEffect } from 'preact/hooks';
 import type { AuthState } from '../../../lib/auth';
 
 interface ChatMessage {
@@ -11,36 +11,28 @@ interface Props {
   auth: AuthState;
 }
 
+const SUGGESTED_QUESTIONS = [
+  'Summarize the key points',
+  'What are the action items?',
+  'Explain the main argument',
+];
+
 export function ChatTab({ videoId, auth }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const messagesEndRef = useRef<HTMLDivElement>(null);
 
-  if (!auth.isSignedIn) {
-    return (
-      <div class="flex flex-col items-center gap-2 px-4 py-8 text-center">
-        <p class="text-sm text-gray-600">Sign in to chat with this video</p>
-        <p class="text-xs text-gray-400">Open the extension popup to sign in</p>
-      </div>
-    );
-  }
+  // Auto-scroll to bottom on new messages
+  useEffect(() => {
+    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [messages, loading]);
 
-  if (!auth.isPro) {
-    return (
-      <div class="flex flex-col items-center gap-2 px-4 py-8 text-center">
-        <p class="text-sm text-gray-600">Chat is a Pro feature</p>
-        <p class="text-xs text-gray-400">$5/month -- save and chat unlimited</p>
-        <button class="mt-2 rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700">
-          Upgrade to Pro
-        </button>
-      </div>
-    );
-  }
+  async function sendMessage(text?: string) {
+    const messageText = text ?? input.trim();
+    if (!messageText || loading) return;
 
-  async function sendMessage() {
-    if (!input.trim() || loading) return;
-
-    const userMessage: ChatMessage = { role: 'user', content: input.trim() };
+    const userMessage: ChatMessage = { role: 'user', content: messageText };
     setMessages((prev) => [...prev, userMessage]);
     setInput('');
     setLoading(true);
@@ -51,7 +43,7 @@ export function ChatTab({ videoId, auth }: Props) {
           {
             type: 'CHAT',
             videoId,
-            message: userMessage.content,
+            message: messageText,
             history: messages,
             token: auth.token,
           },
@@ -69,54 +61,250 @@ export function ChatTab({ videoId, auth }: Props) {
     }
   }
 
+  function handleKeyDown(e: KeyboardEvent) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  }
+
+  // --- Not signed in ---
+  if (!auth.isSignedIn) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '32px 16px',
+          textAlign: 'center',
+          fontFamily: 'Roboto, Arial, sans-serif',
+        }}
+      >
+        <p
+          style={{
+            fontSize: '14px',
+            color: 'var(--text-primary)',
+            margin: 0,
+            fontWeight: 500,
+          }}
+        >
+          Chat with this video
+        </p>
+        <p
+          style={{
+            fontSize: '12px',
+            color: 'var(--text-secondary)',
+            margin: 0,
+          }}
+        >
+          Ask questions, get summaries, and explore the content
+        </p>
+        <button
+          onClick={() => {
+            chrome.runtime.sendMessage({ type: 'OPEN_POPUP' });
+          }}
+          style={{
+            marginTop: '4px',
+            padding: '8px 20px',
+            fontSize: '13px',
+            fontWeight: 500,
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: '#ffffff',
+            background: 'var(--accent)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: 'pointer',
+          }}
+        >
+          Sign in to start
+        </button>
+      </div>
+    );
+  }
+
+  // --- Signed in ---
   return (
-    <div class="flex h-80 flex-col">
-      {/* Messages */}
-      <div class="flex-1 overflow-y-auto px-3 py-2">
-        {messages.length === 0 && (
-          <p class="py-4 text-center text-xs text-gray-400">Ask anything about this video</p>
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'column',
+        height: '100%',
+        fontFamily: 'Roboto, Arial, sans-serif',
+      }}
+    >
+      {/* Messages area */}
+      <div
+        style={{
+          flex: 1,
+          overflowY: 'auto',
+          padding: '12px',
+        }}
+      >
+        {/* Empty state with suggested questions */}
+        {messages.length === 0 && !loading && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '16px',
+              padding: '24px 8px',
+            }}
+          >
+            <p
+              style={{
+                fontSize: '14px',
+                color: 'var(--text-secondary)',
+                margin: 0,
+                textAlign: 'center',
+              }}
+            >
+              Ask anything about this video
+            </p>
+            <div
+              style={{
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '8px',
+                width: '100%',
+              }}
+            >
+              {SUGGESTED_QUESTIONS.map((question) => (
+                <button
+                  key={question}
+                  onClick={() => sendMessage(question)}
+                  style={{
+                    padding: '10px 14px',
+                    fontSize: '13px',
+                    fontFamily: 'Roboto, Arial, sans-serif',
+                    color: 'var(--text-primary)',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border)',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    textAlign: 'left',
+                    lineHeight: '1.4',
+                  }}
+                >
+                  {question}
+                </button>
+              ))}
+            </div>
+          </div>
         )}
+
+        {/* Message bubbles */}
         {messages.map((msg, i) => (
-          <div key={i} class={`mb-2 text-sm ${msg.role === 'user' ? 'text-right' : ''}`}>
-            <span
-              class={`inline-block max-w-[85%] rounded-lg px-3 py-2 ${
-                msg.role === 'user'
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-100 text-gray-700'
-              }`}
+          <div
+            key={i}
+            style={{
+              display: 'flex',
+              justifyContent: msg.role === 'user' ? 'flex-end' : 'flex-start',
+              marginBottom: '8px',
+            }}
+          >
+            <div
+              style={{
+                maxWidth: '85%',
+                padding: '8px 12px',
+                fontSize: '13px',
+                lineHeight: '1.5',
+                whiteSpace: 'pre-wrap',
+                wordBreak: 'break-word',
+                background:
+                  msg.role === 'user' ? 'var(--bubble-user)' : 'var(--bubble-ai)',
+                color:
+                  msg.role === 'user'
+                    ? 'var(--bubble-user-text)'
+                    : 'var(--bubble-ai-text)',
+                borderRadius:
+                  msg.role === 'user'
+                    ? '12px 12px 2px 12px'
+                    : '12px 12px 12px 2px',
+              }}
             >
               {msg.content}
-            </span>
+            </div>
           </div>
         ))}
+
+        {/* Thinking indicator */}
         {loading && (
-          <div class="mb-2 text-sm">
-            <span class="inline-block rounded-lg bg-gray-100 px-3 py-2 text-gray-400">
+          <div
+            style={{
+              display: 'flex',
+              justifyContent: 'flex-start',
+              marginBottom: '8px',
+            }}
+          >
+            <div
+              style={{
+                padding: '8px 12px',
+                fontSize: '13px',
+                lineHeight: '1.5',
+                background: 'var(--bubble-ai)',
+                color: 'var(--text-secondary)',
+                borderRadius: '12px 12px 12px 2px',
+              }}
+            >
               Thinking...
-            </span>
+            </div>
           </div>
         )}
+
+        {/* Scroll anchor */}
+        <div ref={messagesEndRef} />
       </div>
 
-      {/* Input */}
-      <div class="border-t border-gray-100 px-3 py-2">
-        <div class="flex gap-2">
-          <input
-            type="text"
-            value={input}
-            onInput={(e) => setInput((e.target as HTMLInputElement).value)}
-            onKeyDown={(e) => e.key === 'Enter' && sendMessage()}
-            placeholder="Ask a question..."
-            class="flex-1 rounded-lg border border-gray-200 px-3 py-2 text-sm focus:border-blue-500 focus:outline-none"
-          />
-          <button
-            onClick={sendMessage}
-            disabled={loading || !input.trim()}
-            class="rounded-lg bg-blue-600 px-3 py-2 text-sm text-white hover:bg-blue-700 disabled:opacity-50"
-          >
-            Send
-          </button>
-        </div>
+      {/* Input bar */}
+      <div
+        style={{
+          flexShrink: 0,
+          borderTop: '1px solid var(--border)',
+          padding: '8px 12px',
+          display: 'flex',
+          gap: '8px',
+          alignItems: 'center',
+        }}
+      >
+        <input
+          type="text"
+          value={input}
+          onInput={(e) => setInput((e.target as HTMLInputElement).value)}
+          onKeyDown={handleKeyDown}
+          placeholder="Ask a question..."
+          style={{
+            flex: 1,
+            padding: '8px 12px',
+            fontSize: '13px',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: 'var(--text-primary)',
+            background: 'var(--bg-secondary)',
+            border: '1px solid var(--border)',
+            borderRadius: '8px',
+            outline: 'none',
+          }}
+        />
+        <button
+          onClick={() => sendMessage()}
+          disabled={loading || !input.trim()}
+          style={{
+            padding: '8px 16px',
+            fontSize: '13px',
+            fontWeight: 500,
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: '#ffffff',
+            background: 'var(--accent)',
+            border: 'none',
+            borderRadius: '8px',
+            cursor: loading || !input.trim() ? 'default' : 'pointer',
+            opacity: loading || !input.trim() ? 0.5 : 1,
+          }}
+        >
+          Send
+        </button>
       </div>
     </div>
   );

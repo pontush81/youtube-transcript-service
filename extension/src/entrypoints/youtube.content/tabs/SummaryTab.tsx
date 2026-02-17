@@ -4,6 +4,121 @@ interface Props {
   videoId: string;
 }
 
+function escapeHtml(text: string): string {
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+}
+
+function renderMarkdown(text: string): string {
+  const escaped = escapeHtml(text);
+  const lines = escaped.split('\n');
+  const htmlLines: string[] = [];
+
+  for (let i = 0; i < lines.length; i++) {
+    let line = lines[i];
+
+    // Heading: ## Heading → <h3>
+    const headingMatch = line.match(/^#{1,3}\s+(.*)/);
+    if (headingMatch) {
+      const content = headingMatch[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      htmlLines.push(
+        `<h3 style="font-size:15px;font-weight:600;margin:16px 0 8px 0;color:var(--text-primary);line-height:1.4">${content}</h3>`,
+      );
+      continue;
+    }
+
+    // Bullet point: * item or - item
+    const bulletMatch = line.match(/^[\*\-]\s+(.*)/);
+    if (bulletMatch) {
+      const content = bulletMatch[1].replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+      htmlLines.push(
+        `<div style="display:flex;gap:8px;margin:4px 0;line-height:1.5"><span style="color:var(--text-secondary);flex-shrink:0;margin-top:2px">&#8226;</span><span>${content}</span></div>`,
+      );
+      continue;
+    }
+
+    // Empty line → line break
+    if (line.trim() === '') {
+      htmlLines.push('<br/>');
+      continue;
+    }
+
+    // Regular paragraph with bold support
+    line = line.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+    htmlLines.push(`<p style="margin:4px 0;line-height:1.5">${line}</p>`);
+  }
+
+  return htmlLines.join('');
+}
+
+function SkeletonLoader() {
+  return (
+    <div style={{ padding: '16px' }}>
+      {/* Heading placeholder */}
+      <div
+        class="skeleton"
+        style={{ width: '60%', height: '18px', marginBottom: '12px' }}
+      />
+
+      {/* Bullet point placeholders */}
+      {[1, 2, 3].map((i) => (
+        <div key={i} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          <div
+            class="skeleton"
+            style={{ width: '6px', height: '6px', borderRadius: '50%', marginTop: '7px', flexShrink: 0 }}
+          />
+          <div
+            class="skeleton"
+            style={{ width: `${75 - i * 10}%`, height: '14px' }}
+          />
+        </div>
+      ))}
+
+      {/* Second heading placeholder */}
+      <div
+        class="skeleton"
+        style={{ width: '45%', height: '18px', marginTop: '20px', marginBottom: '12px' }}
+      />
+
+      {/* Paragraph placeholders */}
+      <div
+        class="skeleton"
+        style={{ width: '100%', height: '14px', marginBottom: '6px' }}
+      />
+      <div
+        class="skeleton"
+        style={{ width: '90%', height: '14px', marginBottom: '6px' }}
+      />
+      <div
+        class="skeleton"
+        style={{ width: '70%', height: '14px', marginBottom: '16px' }}
+      />
+
+      {/* Third heading placeholder */}
+      <div
+        class="skeleton"
+        style={{ width: '55%', height: '18px', marginTop: '20px', marginBottom: '12px' }}
+      />
+
+      {/* More bullet placeholders */}
+      {[1, 2].map((i) => (
+        <div key={`b${i}`} style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+          <div
+            class="skeleton"
+            style={{ width: '6px', height: '6px', borderRadius: '50%', marginTop: '7px', flexShrink: 0 }}
+          />
+          <div
+            class="skeleton"
+            style={{ width: `${80 - i * 15}%`, height: '14px' }}
+          />
+        </div>
+      ))}
+    </div>
+  );
+}
+
 export function SummaryTab({ videoId }: Props) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -22,7 +137,7 @@ export function SummaryTab({ videoId }: Props) {
     setError(null);
 
     try {
-      // First get the transcript
+      // Step 1: fetch transcript
       const transcriptRes = await new Promise<any>((resolve) => {
         chrome.runtime.sendMessage(
           { type: 'FETCH_TRANSCRIPT', url: `https://www.youtube.com/watch?v=${videoId}` },
@@ -31,11 +146,12 @@ export function SummaryTab({ videoId }: Props) {
       });
 
       if (!transcriptRes.success) {
-        setError('Could not fetch transcript');
+        setError(transcriptRes.error || 'Could not fetch transcript');
+        setLoading(false);
         return;
       }
 
-      // Then summarize it
+      // Step 2: summarize
       const summaryRes = await new Promise<any>((resolve) => {
         chrome.runtime.sendMessage(
           { type: 'SUMMARIZE', markdown: transcriptRes.data.markdown },
@@ -57,35 +173,171 @@ export function SummaryTab({ videoId }: Props) {
     }
   }
 
+  // Loading state: skeleton loader
   if (loading) {
-    return <div class="py-8 text-center text-sm text-gray-500">Generating summary...</div>;
+    return <SkeletonLoader />;
   }
 
-  if (!summary) {
+  // Error state with retry
+  if (error && !summary) {
     return (
-      <div class="flex flex-col items-center gap-3 py-8">
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '10px',
+          padding: '32px 16px',
+          textAlign: 'center',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '13px',
+            color: 'var(--error)',
+            lineHeight: 1.4,
+          }}
+        >
+          {error}
+        </div>
         <button
           onClick={generateSummary}
-          class="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          style={{
+            padding: '8px 20px',
+            fontSize: '13px',
+            fontWeight: 500,
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: 'var(--accent)',
+            backgroundColor: 'transparent',
+            border: '1px solid var(--accent)',
+            borderRadius: '18px',
+            cursor: 'pointer',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-light)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'transparent';
+          }}
         >
-          Summarize video
+          Try again
         </button>
-        {error && <p class="text-xs text-red-600">{error}</p>}
       </div>
     );
   }
 
+  // CTA state: no summary cached, show button
+  if (!summary) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '32px 16px',
+        }}
+      >
+        <div
+          style={{
+            fontSize: '13px',
+            color: 'var(--text-secondary)',
+            textAlign: 'center',
+          }}
+        >
+          Get an AI-generated summary of this video
+        </div>
+        <button
+          onClick={generateSummary}
+          style={{
+            padding: '10px 24px',
+            fontSize: '14px',
+            fontWeight: 500,
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: '#ffffff',
+            backgroundColor: 'var(--accent)',
+            border: 'none',
+            borderRadius: '18px',
+            cursor: 'pointer',
+            transition: 'background-color 0.15s',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent-hover)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.backgroundColor = 'var(--accent)';
+          }}
+        >
+          Summarize video
+        </button>
+      </div>
+    );
+  }
+
+  // Summary rendered
   return (
     <div>
-      <div class="max-h-96 overflow-y-auto px-4 py-3 text-sm leading-relaxed text-gray-700 whitespace-pre-wrap">
-        {summary}
-      </div>
-      <div class="flex gap-2 border-t border-gray-100 px-3 py-2">
+      <div
+        style={{
+          padding: '12px 16px',
+          fontSize: '13px',
+          color: 'var(--text-primary)',
+          lineHeight: 1.5,
+        }}
+        dangerouslySetInnerHTML={{ __html: renderMarkdown(summary) }}
+      />
+
+      {/* Footer actions */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '12px',
+          padding: '8px 16px',
+          borderTop: '1px solid var(--border)',
+        }}
+      >
         <button
           onClick={() => navigator.clipboard.writeText(summary)}
-          class="text-xs text-gray-500 hover:text-gray-700"
+          style={{
+            fontSize: '12px',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: 'var(--text-secondary)',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 0',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+          }}
         >
           Copy summary
+        </button>
+        <button
+          onClick={() => {
+            setSummary(null);
+            chrome.storage.local.remove(`summary_${videoId}`);
+          }}
+          style={{
+            fontSize: '12px',
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: 'var(--text-secondary)',
+            backgroundColor: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+            padding: '4px 0',
+          }}
+          onMouseEnter={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-primary)';
+          }}
+          onMouseLeave={(e) => {
+            (e.currentTarget as HTMLElement).style.color = 'var(--text-secondary)';
+          }}
+        >
+          Regenerate
         </button>
       </div>
     </div>
