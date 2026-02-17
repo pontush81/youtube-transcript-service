@@ -46,13 +46,10 @@ export async function fetchSummary(markdown: string): Promise<{ summary: string 
   return res.json();
 }
 
-export async function saveToLibrary(url: string, token: string): Promise<{ success: boolean }> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/add`, {
+export async function saveToLibrary(url: string): Promise<{ success: boolean; downloadUrl?: string; title?: string }> {
+  const res = await fetchWithTimeout(`${API_BASE}/api/transcript`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
+    headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ url }),
   });
 

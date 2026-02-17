@@ -21,7 +21,7 @@ export default defineBackground(() => {
         return { success: true, data };
       }
       case 'SAVE_TO_LIBRARY': {
-        const data = await saveToLibrary(message.url, message.token);
+        const data = await saveToLibrary(message.url);
         return { success: true, data };
       }
       case 'CHAT': {

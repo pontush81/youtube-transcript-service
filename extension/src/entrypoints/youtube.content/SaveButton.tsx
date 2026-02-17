@@ -1,12 +1,10 @@
 import { useState } from 'preact/hooks';
-import type { AuthState } from '../../lib/auth';
 
 interface Props {
   videoId: string;
-  auth: AuthState;
 }
 
-export function SaveButton({ videoId, auth }: Props) {
+export function SaveButton({ videoId }: Props) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -20,7 +18,6 @@ export function SaveButton({ videoId, auth }: Props) {
           {
             type: 'SAVE_TO_LIBRARY',
             url: `https://www.youtube.com/watch?v=${videoId}`,
-            token: auth.token,
           },
           resolve,
         );
@@ -59,24 +56,6 @@ export function SaveButton({ videoId, auth }: Props) {
     color: '#fff',
   };
 
-  // Not signed in
-  if (!auth.isSignedIn) {
-    return (
-      <div style={containerStyle}>
-        <span
-          style={{
-            fontSize: '13px',
-            color: 'var(--text-secondary)',
-            fontFamily: 'Roboto, sans-serif',
-          }}
-        >
-          Sign in to save to your library
-        </span>
-      </div>
-    );
-  }
-
-  // Saved
   if (saved) {
     return (
       <div style={containerStyle}>
@@ -94,7 +73,6 @@ export function SaveButton({ videoId, auth }: Props) {
     );
   }
 
-  // Saving or ready to save
   return (
     <div style={containerStyle}>
       {error && (
