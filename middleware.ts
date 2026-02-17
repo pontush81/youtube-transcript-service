@@ -10,7 +10,8 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks/(.*)',  // Clerk webhooks
   '/api/webhook(.*)',    // Zapier webhook (uses API key)
   '/api/transcript',     // Chrome extension + public use (has rate limiting)
-  '/api/chat',           // Chrome extension summary/chat (has rate limiting)
+  '/api/chat',           // Chrome extension chat (has rate limiting)
+  '/api/summary',        // Chrome extension summary (has rate limiting)
   '/api/db/(.*)',        // Admin DB routes (use admin key)
   '/api/metadata/(.*)',  // Metadata backfill (use admin key)
   '/api/admin/(.*)',     // Admin routes (use admin key or Clerk admin role)
