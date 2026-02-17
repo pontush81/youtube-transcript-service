@@ -248,7 +248,7 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
       >
         {activeTab === 'transcript' && <TranscriptTab videoId={videoId} />}
         {activeTab === 'summary' && <SummaryTab videoId={videoId} />}
-        {activeTab === 'chat' && <ChatTab videoId={videoId} auth={auth} />}
+        {activeTab === 'chat' && <ChatTab videoId={videoId} />}
       </div>
 
       {/* Action bar (sticky bottom) */}
