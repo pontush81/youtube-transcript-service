@@ -2,10 +2,29 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractVideoId, fetchTranscript, fetchVideoTitle } from '@/lib/youtube';
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
+import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
+import { secureCompare } from '@/lib/admin';
 
 // Removed edge runtime - youtube-transcript requires Node.js
 
 export async function GET(request: NextRequest) {
+  // API key authentication
+  const apiKey = request.nextUrl.searchParams.get('key') || request.headers.get('x-api-key');
+  const validKey = process.env.WEBHOOK_API_KEY || process.env.ADMIN_KEY;
+  if (!validKey || !apiKey || !secureCompare(apiKey, validKey)) {
+    return NextResponse.json({ success: false, error: 'Unauthorized' }, { status: 401 });
+  }
+
+  // Rate limiting
+  const clientId = getClientIdentifier(request);
+  const rateLimit = await checkRateLimit('transcript', clientId);
+  if (!rateLimit.allowed) {
+    return NextResponse.json(
+      { success: false, error: 'Too many requests', retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
+      { status: 429, headers: rateLimitHeaders(rateLimit) }
+    );
+  }
+
   const searchParams = request.nextUrl.searchParams;
   const url = searchParams.get('url');
 

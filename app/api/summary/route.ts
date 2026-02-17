@@ -1,8 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
+import { z } from 'zod';
 
 export const maxDuration = 30;
+
+const summaryRequestSchema = z.object({
+  transcript: z.string().min(50, 'Transcript too short').max(100000, 'Transcript too long'),
+});
 
 const SUMMARY_PROMPT = `You are a helpful assistant that summarizes YouTube video transcripts.
 Given the transcript below, provide:
@@ -17,7 +22,7 @@ Write in the same language as the transcript.`;
 
 export async function POST(request: NextRequest) {
   const clientId = getClientIdentifier(request);
-  const rateLimit = await checkRateLimit('chat', clientId);
+  const rateLimit = await checkRateLimit('summary', clientId);
 
   if (!rateLimit.allowed) {
     return NextResponse.json(
@@ -32,14 +37,15 @@ export async function POST(request: NextRequest) {
   }
 
   try {
-    const { transcript } = await request.json();
+    const raw = await request.json();
+    const parsed = summaryRequestSchema.safeParse(raw);
 
-    if (!transcript || typeof transcript !== 'string') {
-      return NextResponse.json({ error: 'transcript is required' }, { status: 400 });
+    if (!parsed.success) {
+      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid request' }, { status: 400 });
     }
 
     // Truncate to ~12k tokens worth of text to stay within limits
-    const truncated = transcript.slice(0, 48000);
+    const truncated = parsed.data.transcript.slice(0, 48000);
 
     const openai = new OpenAI({ apiKey });
     const completion = await openai.chat.completions.create({

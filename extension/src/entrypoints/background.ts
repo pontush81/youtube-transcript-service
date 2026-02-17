@@ -33,6 +33,12 @@ export default defineBackground(() => {
         );
         return { success: true, response };
       }
+      case 'OPEN_POPUP': {
+        // Chrome doesn't allow programmatic popup opening from content scripts.
+        // Open the extension popup page in a new tab instead.
+        chrome.tabs.create({ url: chrome.runtime.getURL('/popup.html') });
+        return { success: true };
+      }
       case 'GET_AUTH_STATE': {
         const result = await chrome.storage.local.get(['authToken', 'isPro']);
         return {

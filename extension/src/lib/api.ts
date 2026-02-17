@@ -1,6 +1,8 @@
 const API_BASE =
   import.meta.env.VITE_API_BASE_URL || 'https://youtube-transcript-service-two.vercel.app';
 
+const TIMEOUT_MS = 30000;
+
 interface TranscriptResponse {
   markdown: string;
   title: string;
@@ -13,11 +15,17 @@ interface ChatMessage {
   content: string;
 }
 
+function fetchWithTimeout(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer));
+}
+
 export async function fetchTranscript(url: string, token?: string): Promise<TranscriptResponse> {
   const headers: Record<string, string> = { 'Content-Type': 'application/json' };
   if (token) headers['Authorization'] = `Bearer ${token}`;
 
-  const res = await fetch(`${API_BASE}/api/transcript`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/transcript`, {
     method: 'POST',
     headers,
     body: JSON.stringify({ url }),
@@ -28,7 +36,7 @@ export async function fetchTranscript(url: string, token?: string): Promise<Tran
 }
 
 export async function fetchSummary(markdown: string): Promise<{ summary: string }> {
-  const res = await fetch(`${API_BASE}/api/summary`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/summary`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ transcript: markdown }),
@@ -39,7 +47,7 @@ export async function fetchSummary(markdown: string): Promise<{ summary: string 
 }
 
 export async function saveToLibrary(url: string, token: string): Promise<{ success: boolean }> {
-  const res = await fetch(`${API_BASE}/api/add`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/add`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -56,15 +64,16 @@ export async function chatWithVideo(
   videoId: string,
   message: string,
   history: ChatMessage[],
-  token: string,
+  _token: string,
 ): Promise<string> {
-  const res = await fetch(`${API_BASE}/api/chat`, {
+  const res = await fetchWithTimeout(`${API_BASE}/api/chat/extension`, {
     method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      Authorization: `Bearer ${token}`,
-    },
-    body: JSON.stringify({ videoId, message, history }),
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      videoId,
+      message,
+      conversationHistory: history,
+    }),
   });
 
   if (!res.ok) throw new Error(`Chat failed: ${res.status}`);

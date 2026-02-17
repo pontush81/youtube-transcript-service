@@ -53,9 +53,17 @@ export function ChatTab({ videoId, auth }: Props) {
 
       if (response.success) {
         setMessages((prev) => [...prev, { role: 'assistant', content: response.response }]);
+      } else {
+        setMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: `Error: ${response.error || 'Something went wrong. Try again.'}` },
+        ]);
       }
     } catch {
-      // ignore
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: 'Error: Could not reach the server. Try again.' },
+      ]);
     } finally {
       setLoading(false);
     }

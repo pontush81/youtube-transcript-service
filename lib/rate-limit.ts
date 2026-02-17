@@ -55,12 +55,22 @@ const backfillLimiter = isRedisConfigured
     })
   : null;
 
+const summaryLimiter = isRedisConfigured
+  ? new Ratelimit({
+      redis,
+      limiter: Ratelimit.slidingWindow(5, '1 m'), // 5 per minute (OpenAI cost protection)
+      analytics: true,
+      prefix: 'ratelimit:summary',
+    })
+  : null;
+
 // Limiter map for easy access
 const limiters = {
   chat: chatLimiter,
   transcript: transcriptLimiter,
   delete: deleteLimiter,
   backfill: backfillLimiter,
+  summary: summaryLimiter,
 };
 
 export type RateLimitType = keyof typeof limiters;
