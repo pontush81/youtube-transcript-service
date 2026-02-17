@@ -15,15 +15,23 @@ const SUGGESTED_QUESTIONS = [
   'Explain the main argument',
 ];
 
+/** Stop keyboard events from reaching YouTube's shortcut handlers */
+function stopYouTubeShortcuts(e: Event) {
+  e.stopPropagation();
+}
+
 export function ChatTab({ videoId }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = messagesContainerRef.current;
+    if (container) {
+      container.scrollTop = container.scrollHeight;
+    }
   }, [messages, loading]);
 
   async function sendMessage(text?: string) {
@@ -68,6 +76,7 @@ export function ChatTab({ videoId }: Props) {
   }
 
   function handleKeyDown(e: KeyboardEvent) {
+    e.stopPropagation();
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
       sendMessage();
@@ -85,6 +94,7 @@ export function ChatTab({ videoId }: Props) {
     >
       {/* Messages area */}
       <div
+        ref={messagesContainerRef}
         style={{
           flex: 1,
           overflowY: 'auto',
@@ -203,8 +213,6 @@ export function ChatTab({ videoId }: Props) {
           </div>
         )}
 
-        {/* Scroll anchor */}
-        <div ref={messagesEndRef} />
       </div>
 
       {/* Input bar */}
@@ -223,6 +231,8 @@ export function ChatTab({ videoId }: Props) {
           value={input}
           onInput={(e) => setInput((e.target as HTMLInputElement).value)}
           onKeyDown={handleKeyDown}
+          onKeyUp={stopYouTubeShortcuts}
+          onKeyPress={stopYouTubeShortcuts}
           placeholder="Ask a question..."
           style={{
             flex: 1,

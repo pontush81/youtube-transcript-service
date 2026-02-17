@@ -74,6 +74,11 @@ function highlightMatch(text: string, query: string): preact.JSX.Element {
   );
 }
 
+/** Stop keyboard events from reaching YouTube's shortcut handlers */
+function stopYouTubeShortcuts(e: Event) {
+  e.stopPropagation();
+}
+
 export function TranscriptTab({ videoId }: Props) {
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [loading, setLoading] = useState(false);
@@ -93,10 +98,19 @@ export function TranscriptTab({ videoId }: Props) {
     return () => video.removeEventListener('timeupdate', onTimeUpdate);
   }, []);
 
-  // Auto-scroll active segment into view
+  // Auto-scroll active segment into view (within the segment list only)
   useEffect(() => {
-    if (activeSegmentRef.current && !searchQuery) {
-      activeSegmentRef.current.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const el = activeSegmentRef.current;
+    if (!el || searchQuery) return;
+    const container = el.parentElement;
+    if (!container) return;
+    const elTop = el.offsetTop - container.offsetTop;
+    const elBottom = elTop + el.offsetHeight;
+    const viewTop = container.scrollTop;
+    const viewBottom = viewTop + container.clientHeight;
+    // Only scroll if the element is outside the visible area
+    if (elTop < viewTop || elBottom > viewBottom) {
+      container.scrollTop = elTop - container.clientHeight / 2 + el.offsetHeight / 2;
     }
   }, [currentTime, searchQuery]);
 
@@ -303,6 +317,9 @@ export function TranscriptTab({ videoId }: Props) {
           placeholder="Search transcript..."
           value={searchQuery}
           onInput={(e) => setSearchQuery((e.target as HTMLInputElement).value)}
+          onKeyDown={stopYouTubeShortcuts}
+          onKeyUp={stopYouTubeShortcuts}
+          onKeyPress={stopYouTubeShortcuts}
           style={{
             width: '100%',
             padding: '6px 10px',
