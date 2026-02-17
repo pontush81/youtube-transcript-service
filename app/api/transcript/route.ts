@@ -143,6 +143,7 @@ export async function POST(request: NextRequest) {
       videoId,
       title,
       downloadUrl,
+      markdown,
       chunksCreated: embeddingResult.chunksCreated,
       embeddingStatus: embeddingResult.valid ? 'indexed' : 'skipped',
       embeddingReason: embeddingResult.reason || undefined,

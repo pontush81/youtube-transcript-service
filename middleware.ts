@@ -9,6 +9,8 @@ const isPublicRoute = createRouteMatcher([
   '/sign-up(.*)',        // Keep public for Clerk invites (restrict in Clerk Dashboard)
   '/api/webhooks/(.*)',  // Clerk webhooks
   '/api/webhook(.*)',    // Zapier webhook (uses API key)
+  '/api/transcript',     // Chrome extension + public use (has rate limiting)
+  '/api/chat',           // Chrome extension summary/chat (has rate limiting)
   '/api/db/(.*)',        // Admin DB routes (use admin key)
   '/api/metadata/(.*)',  // Metadata backfill (use admin key)
   '/api/admin/(.*)',     // Admin routes (use admin key or Clerk admin role)
