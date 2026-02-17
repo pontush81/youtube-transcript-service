@@ -1,8 +1,14 @@
 import type { TranscriptData } from './tabs/TranscriptTab';
+import type { ChatMessage } from './tabs/ChatTab';
+
+type Tab = 'transcript' | 'summary' | 'chat';
 
 interface Props {
   videoId: string;
+  activeTab: Tab;
   transcriptData: TranscriptData | null;
+  summaryText: string | null;
+  chatMessages: ChatMessage[];
 }
 
 function sanitizeFilename(title: string): string {
@@ -25,7 +31,7 @@ function downloadFile(content: string, filename: string) {
   URL.revokeObjectURL(url);
 }
 
-function generateMarkdown(data: TranscriptData, videoId: string): string {
+function generateTranscriptMd(data: TranscriptData, videoId: string): string {
   const lines = [
     `# ${data.title}`,
     '',
@@ -35,34 +41,86 @@ function generateMarkdown(data: TranscriptData, videoId: string): string {
     '---',
     '',
   ];
-
   for (const seg of data.segments) {
     lines.push(`**${seg.timestamp}** ${seg.text}`);
   }
-
   return lines.join('\n');
 }
 
-function generatePlainText(data: TranscriptData): string {
+function generateTranscriptTxt(data: TranscriptData): string {
   return data.segments.map((seg) => `${seg.timestamp} ${seg.text}`).join('\n');
 }
 
-export function DownloadBar({ videoId, transcriptData }: Props) {
-  if (!transcriptData) {
-    return null;
-  }
+function generateSummaryMd(summary: string, title: string, videoId: string): string {
+  return [
+    `# Summary: ${title}`,
+    '',
+    `**Video:** https://www.youtube.com/watch?v=${videoId}`,
+    `**Generated:** ${new Date().toISOString().split('T')[0]}`,
+    '',
+    '---',
+    '',
+    summary,
+  ].join('\n');
+}
 
-  const baseName = sanitizeFilename(transcriptData.title);
+function generateChatMd(messages: ChatMessage[], title: string, videoId: string): string {
+  const lines = [
+    `# Chat: ${title}`,
+    '',
+    `**Video:** https://www.youtube.com/watch?v=${videoId}`,
+    `**Exported:** ${new Date().toISOString().split('T')[0]}`,
+    '',
+    '---',
+    '',
+  ];
+  for (const msg of messages) {
+    lines.push(`**${msg.role === 'user' ? 'You' : 'AI'}:** ${msg.content}`);
+    lines.push('');
+  }
+  return lines.join('\n');
+}
+
+function generateChatTxt(messages: ChatMessage[]): string {
+  return messages
+    .map((msg) => `${msg.role === 'user' ? 'You' : 'AI'}: ${msg.content}`)
+    .join('\n\n');
+}
+
+export function DownloadBar({ videoId, activeTab, transcriptData, summaryText, chatMessages }: Props) {
+  const hasContent =
+    (activeTab === 'transcript' && transcriptData) ||
+    (activeTab === 'summary' && summaryText) ||
+    (activeTab === 'chat' && chatMessages.length > 0);
+
+  if (!hasContent) return null;
+
+  const title = transcriptData?.title || 'video';
+  const baseName = sanitizeFilename(title);
 
   function handleDownloadMd() {
-    const content = generateMarkdown(transcriptData!, videoId);
-    downloadFile(content, `${baseName}.md`);
+    if (activeTab === 'transcript' && transcriptData) {
+      downloadFile(generateTranscriptMd(transcriptData, videoId), `${baseName}.md`);
+    } else if (activeTab === 'summary' && summaryText) {
+      downloadFile(generateSummaryMd(summaryText, title, videoId), `${baseName}-summary.md`);
+    } else if (activeTab === 'chat' && chatMessages.length > 0) {
+      downloadFile(generateChatMd(chatMessages, title, videoId), `${baseName}-chat.md`);
+    }
   }
 
   function handleDownloadTxt() {
-    const content = generatePlainText(transcriptData!);
-    downloadFile(content, `${baseName}.txt`);
+    if (activeTab === 'transcript' && transcriptData) {
+      downloadFile(generateTranscriptTxt(transcriptData), `${baseName}.txt`);
+    } else if (activeTab === 'summary' && summaryText) {
+      downloadFile(summaryText, `${baseName}-summary.txt`);
+    } else if (activeTab === 'chat' && chatMessages.length > 0) {
+      downloadFile(generateChatTxt(chatMessages), `${baseName}-chat.txt`);
+    }
   }
+
+  const label =
+    activeTab === 'transcript' ? 'transcript' :
+    activeTab === 'summary' ? 'summary' : 'chat';
 
   const buttonStyle: Record<string, string> = {
     flex: '1',
@@ -88,10 +146,10 @@ export function DownloadBar({ videoId, transcriptData }: Props) {
       }}
     >
       <button onClick={handleDownloadMd} style={buttonStyle}>
-        Download .md
+        Download {label} .md
       </button>
       <button onClick={handleDownloadTxt} style={buttonStyle}>
-        Download .txt
+        Download {label} .txt
       </button>
     </div>
   );
