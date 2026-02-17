@@ -6,32 +6,25 @@ Total genomgång av säkerhet, prestanda, arkitektur och kodkvalitet.
 
 ---
 
-## 🔴 Kritiskt (fixa först)
+## ~~🔴 Kritiskt~~ ✅ Fixat 2026-02-17
 
-### Säkerhet
-- [ ] **Fixa secureCompare timing-attack** - `lib/admin.ts:20` jämför buffer med sig själv vid längdskillnad, läcker admin-nyckelns längd. Duplicerad i `app/api/delete/route.ts:10-25` — konsolidera och fixa.
-- [ ] **Rate limiter fails open** - `lib/rate-limit.ts:154-160` — vid Redis-fel tillåts requests istället för att blockeras. Byt till fail-closed.
-- [ ] **Backfill-endpoint saknar admin-check** - `app/api/metadata/backfill/route.ts:11-20` — autentiserade icke-admin-användare kan trigga dyra YouTube API-anrop.
+- [x] **secureCompare timing-attack** — SHA-256 hash normalisering, konsoliderad till lib/admin.ts
+- [x] **Rate limiter** — Omskriven från Redis till PostgreSQL, fail-closed vid DB-fel
+- [x] **Backfill admin-check** — Kräver admin-roll på POST och GET
+- [x] **Embeddings race condition** — DELETE+INSERT wrappat i transaktion
+- [x] **Env-validering** — lib/env.ts med tydliga felmeddelanden
 
-### Dataintegritet
-- [ ] **Race condition i embeddings** - `lib/embeddings.ts:63-66` — DELETE + INSERT utan transaktion. Om INSERT misslyckas förloras data. Wrappa i databas-transaktion.
-- [ ] **Env-variabler valideras inte vid start** - Stripe/OpenAI-nycklar använder `!` non-null assertions. Kraschar vid runtime istället för boot. Lägg till startup-validering.
+## ~~🟡 Högt~~ ✅ Fixat 2026-02-17
 
----
+- [x] **Prompt injection-skydd** — XML-delimiters i summarize och query-rewriter
+- [x] **.env.production.local** — Redan i .gitignore, ej trackad
+- [x] **Saknade databasindex** — user_transcripts(video_id), transcript_chunks(blob_url, video_id+created_at)
+- [x] **Parallellisera POST /api/transcript** — Title + transcript körs med Promise.allSettled
+- [x] **Next.js Image** — Bytt till Image-komponent + remotePatterns i next.config.ts
+- [x] **Redis borttaget** — Rate limiting flyttad till PostgreSQL, @upstash/* avinstallerat
 
-## 🟡 Högt (nästa vecka)
-
-### Säkerhet
-- [ ] **Prompt injection-skydd** - `app/api/summarize/route.ts:101` och `lib/ai/query-rewriter.ts:54-59` — användarinput bäddas in i AI-prompts utan escaping.
-- [ ] **Ta bort .env.production.local från git** — Innehåller test-nycklar (pk_test_). Lägg till i `.gitignore`.
-
-### Prestanda
+### Kvar (högt)
 - [ ] **N+1 queries i /api/transcripts** - `app/api/transcripts/route.ts:112-159` — loopar igenom varje blob med individuella DB-queries och fetch-anrop. Batch-ladda metadata.
-- [ ] **Saknade databasindex** — `video_metadata(video_id)`, `user_transcripts(video_id)`, `transcript_chunks(blob_url)`, `transcript_chunks(video_id, created_at)`.
-- [ ] **Parallellisera POST /api/transcript** - `app/api/transcript/route.ts:56-93` — title, transcript och save körs sekventiellt men är oberoende. Använd `Promise.all()`.
-- [ ] **Använd Next.js Image** - `app/transcripts/page.tsx:530-535` — raw `<img>` utan optimering. Konfigurerar även `next.config.ts` med `remotePatterns` för `i.ytimg.com`.
-
-### Kodkvalitet
 - [ ] **Noll tester** — Ingen testkonfiguration, inga testfiler. Lägg till Vitest + tester för kritiska flöden: auth, rate limiting, vector search, embeddings.
 - [ ] **Standardisera error responses** — Vissa endpoints returnerar `{ success, error }`, andra bara `{ error }`. Skapa gemensam felhanteringsfunktion.
 

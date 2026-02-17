@@ -100,6 +100,26 @@ export async function setupDatabase() {
     ON user_transcripts (is_public) WHERE is_public = true
   `;
 
+  // Index for video_id lookups (used in delete operations)
+  await sql`
+    CREATE INDEX IF NOT EXISTS user_transcripts_video_id_idx
+    ON user_transcripts (video_id)
+  `;
+
+  // ==========================================
+  // Rate limits table (PostgreSQL-based rate limiting)
+  // ==========================================
+
+  await sql`
+    CREATE TABLE IF NOT EXISTS rate_limits (
+      identifier TEXT NOT NULL,
+      endpoint TEXT NOT NULL,
+      window_start BIGINT NOT NULL,
+      request_count INTEGER DEFAULT 1,
+      PRIMARY KEY (identifier, endpoint, window_start)
+    )
+  `;
+
   // ==========================================
   // Transcript chunks table
   // ==========================================
@@ -123,6 +143,18 @@ export async function setupDatabase() {
   await sql`
     CREATE INDEX IF NOT EXISTS transcript_chunks_video_id_idx
     ON transcript_chunks (video_id)
+  `;
+
+  // Index for blob_url lookups (used in deletion operations)
+  await sql`
+    CREATE INDEX IF NOT EXISTS transcript_chunks_blob_url_idx
+    ON transcript_chunks (blob_url)
+  `;
+
+  // Composite index for sorted queries by video
+  await sql`
+    CREATE INDEX IF NOT EXISTS transcript_chunks_video_created_idx
+    ON transcript_chunks (video_id, created_at)
   `;
 
   // For IVFFlat, check row count and create/recreate index if needed

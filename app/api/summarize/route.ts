@@ -98,7 +98,13 @@ RULES:
           },
           {
             role: 'user',
-            content: `Create a summary of the key points from this transcript of "${title}":\n\n${transcript.substring(0, 12000)}`,
+            content: `Create a summary of the key points from this transcript.
+
+<video_title>${(title || '').substring(0, 200)}</video_title>
+
+<transcript>
+${transcript.substring(0, 12000)}
+</transcript>`,
           },
         ],
         temperature: 0.3,

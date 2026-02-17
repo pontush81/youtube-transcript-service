@@ -1,79 +1,23 @@
 /**
- * Persistent rate limiter using Upstash Redis.
- * Works across serverless cold starts and multiple instances.
+ * Rate limiter using PostgreSQL.
+ * Fixed-window approach: counts requests per identifier per minute.
+ * Automatically cleans up old entries.
  */
 
-import { Redis } from '@upstash/redis';
-import { Ratelimit } from '@upstash/ratelimit';
+import { sql } from '@/lib/db';
 
-// Initialize Redis client (uses UPSTASH_REDIS_REST_URL and UPSTASH_REDIS_REST_TOKEN env vars)
-const redis = new Redis({
-  url: process.env.UPSTASH_REDIS_REST_URL || '',
-  token: process.env.UPSTASH_REDIS_REST_TOKEN || '',
-});
-
-// Check if Redis is configured
-const isRedisConfigured = !!(
-  process.env.UPSTASH_REDIS_REST_URL &&
-  process.env.UPSTASH_REDIS_REST_TOKEN
-);
-
-// Create rate limiters for different endpoints
-const chatLimiter = isRedisConfigured
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(30, '1 m'), // 30 requests per minute
-      analytics: true,
-      prefix: 'ratelimit:chat',
-    })
-  : null;
-
-const transcriptLimiter = isRedisConfigured
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(10, '1 m'), // 10 requests per minute
-      analytics: true,
-      prefix: 'ratelimit:transcript',
-    })
-  : null;
-
-const deleteLimiter = isRedisConfigured
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, '1 m'), // 5 delete attempts per minute
-      analytics: true,
-      prefix: 'ratelimit:delete',
-    })
-  : null;
-
-const backfillLimiter = isRedisConfigured
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(2, '1 m'), // 2 backfills per minute
-      analytics: true,
-      prefix: 'ratelimit:backfill',
-    })
-  : null;
-
-const summaryLimiter = isRedisConfigured
-  ? new Ratelimit({
-      redis,
-      limiter: Ratelimit.slidingWindow(5, '1 m'), // 5 per minute (OpenAI cost protection)
-      analytics: true,
-      prefix: 'ratelimit:summary',
-    })
-  : null;
-
-// Limiter map for easy access
-const limiters = {
-  chat: chatLimiter,
-  transcript: transcriptLimiter,
-  delete: deleteLimiter,
-  backfill: backfillLimiter,
-  summary: summaryLimiter,
+// Rate limits per endpoint (requests per minute)
+const LIMITS: Record<string, number> = {
+  chat: 30,
+  transcript: 10,
+  delete: 5,
+  backfill: 2,
+  summary: 5,
 };
 
-export type RateLimitType = keyof typeof limiters;
+const WINDOW_SIZE_MS = 60_000; // 1 minute
+
+export type RateLimitType = keyof typeof LIMITS;
 
 export interface RateLimitResult {
   allowed: boolean;
@@ -82,80 +26,47 @@ export interface RateLimitResult {
   limit: number;
 }
 
-// Track Redis failures for circuit breaker
-let redisFailureCount = 0;
-let lastFailureTime = 0;
-const FAILURE_THRESHOLD = 3;
-const RECOVERY_TIME_MS = 60000; // 1 minute
-
 /**
  * Check rate limit for a specific endpoint type and identifier.
- * Implements circuit breaker pattern - fails closed after repeated Redis failures.
+ * Uses PostgreSQL with fixed-window counting.
  */
 export async function checkRateLimit(
   type: RateLimitType,
   identifier: string
 ): Promise<RateLimitResult> {
-  const limiter = limiters[type];
-
-  // If Redis not configured, allow but warn
-  if (!limiter) {
-    console.warn(`Rate limiting disabled: Redis not configured. Type: ${type}`);
-    return {
-      allowed: true,
-      remaining: 999,
-      resetAt: Date.now() + 60000,
-      limit: 999,
-    };
-  }
-
-  // Circuit breaker: if too many recent failures, fail closed
+  const limit = LIMITS[type] ?? 10;
   const now = Date.now();
-  if (redisFailureCount >= FAILURE_THRESHOLD) {
-    if (now - lastFailureTime < RECOVERY_TIME_MS) {
-      console.warn('Circuit breaker open: Rate limiting failing closed');
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: lastFailureTime + RECOVERY_TIME_MS,
-        limit: 0,
-      };
-    }
-    // Recovery time passed, reset counter
-    redisFailureCount = 0;
-  }
+  const windowStart = Math.floor(now / WINDOW_SIZE_MS) * WINDOW_SIZE_MS;
+  const resetAt = windowStart + WINDOW_SIZE_MS;
 
   try {
-    const result = await limiter.limit(identifier);
-    // Success - reset failure counter
-    redisFailureCount = 0;
-    return {
-      allowed: result.success,
-      remaining: result.remaining,
-      resetAt: result.reset,
-      limit: result.limit,
-    };
-  } catch (error) {
-    // Track failure
-    redisFailureCount++;
-    lastFailureTime = now;
-    console.error(`Rate limit check failed (${redisFailureCount}/${FAILURE_THRESHOLD}):`, error);
+    // Upsert: increment counter for current window, return new count
+    const result = await sql`
+      INSERT INTO rate_limits (identifier, endpoint, window_start, request_count)
+      VALUES (${identifier}, ${type}, ${windowStart}, 1)
+      ON CONFLICT (identifier, endpoint, window_start)
+      DO UPDATE SET request_count = rate_limits.request_count + 1
+      RETURNING request_count
+    `;
 
-    // Fail closed after threshold
-    if (redisFailureCount >= FAILURE_THRESHOLD) {
-      return {
-        allowed: false,
-        remaining: 0,
-        resetAt: now + RECOVERY_TIME_MS,
-        limit: 0,
-      };
+    const count = result.rows[0]?.request_count ?? 1;
+    const allowed = count <= limit;
+    const remaining = Math.max(0, limit - count);
+
+    // Periodically clean up old entries (1% chance per request to avoid overhead)
+    if (Math.random() < 0.01) {
+      const cutoff = now - WINDOW_SIZE_MS * 5; // Keep last 5 minutes
+      sql`DELETE FROM rate_limits WHERE window_start < ${cutoff}`.catch(() => {});
     }
 
-    // Fail closed: block requests on Redis failure to prevent abuse
+    return { allowed, remaining, resetAt, limit };
+  } catch (error) {
+    // If DB fails, fail closed to prevent abuse
+    console.error('Rate limit check failed:', error);
     return {
       allowed: false,
       remaining: 0,
-      resetAt: now + 60000,
+      resetAt: now + WINDOW_SIZE_MS,
       limit: 0,
     };
   }

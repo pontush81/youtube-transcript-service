@@ -26,7 +26,7 @@ https://github.com/pontush81/youtube-transcript-service
 - Vercel Blob Storage (fillagring)
 - OpenAI GPT-4o-mini (AI-formatering)
 - Clerk (autentisering)
-- PostgreSQL (metadata, embeddings)
+- PostgreSQL (metadata, embeddings, rate limiting)
 
 ## API Endpoints
 - `POST /api/transcript` - Hämta transkript via formulär

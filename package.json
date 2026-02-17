@@ -14,8 +14,6 @@
     "@clerk/localizations": "^3.35.1",
     "@clerk/nextjs": "^6.36.9",
     "@tailwindcss/postcss": "^4.1.18",
-    "@upstash/ratelimit": "^2.0.8",
-    "@upstash/redis": "^1.36.1",
     "@vercel/analytics": "^1.6.1",
     "@vercel/blob": "^0.27.1",
     "@vercel/postgres": "^0.10.0",

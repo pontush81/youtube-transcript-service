@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { TranscriptListSkeleton } from '@/components/Skeleton';
 import { useTranscripts, TranscriptItem, Channel, Category, formatDuration, formatViewCount } from '@/lib/hooks/useTranscripts';
 
@@ -525,13 +526,14 @@ function TranscriptRow({
       )}
 
       {/* Thumbnail */}
-      <div className="flex-shrink-0 w-24 sm:w-32 aspect-video bg-gray-200 rounded-lg overflow-hidden">
+      <div className="flex-shrink-0 w-24 sm:w-32 aspect-video bg-gray-200 rounded-lg overflow-hidden relative">
         {transcript.thumbnailUrl ? (
-          <img
+          <Image
             src={transcript.thumbnailUrl}
             alt=""
-            className="w-full h-full object-cover"
-            loading="lazy"
+            fill
+            sizes="(max-width: 640px) 96px, 128px"
+            className="object-cover"
           />
         ) : (
           <div className="w-full h-full flex items-center justify-center bg-gray-100">

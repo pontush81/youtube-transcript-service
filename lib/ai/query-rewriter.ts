@@ -51,10 +51,11 @@ Rules:
         },
         {
           role: 'user',
-          content: `Conversation:
+          content: `<conversation>
 ${recentHistory.map(m => `${m.role}: ${m.content.substring(0, 200)}`).join('\n')}
+</conversation>
 
-Query to rewrite: "${query}"
+<query>${query.substring(0, 500)}</query>
 
 Rewritten query:`
         }

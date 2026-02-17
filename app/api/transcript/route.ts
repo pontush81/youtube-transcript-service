@@ -52,23 +52,20 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let title: string;
-    try {
-      title = await fetchVideoTitle(videoId);
-    } catch {
+    // Fetch title and transcript in parallel (they're independent)
+    const [titleResult, transcriptResult] = await Promise.allSettled([
+      fetchVideoTitle(videoId),
+      fetchTranscriptWithSegments(videoId),
+    ]);
+
+    if (titleResult.status === 'rejected') {
       return NextResponse.json(
         { success: false, error: 'Video not found or is private' },
         { status: 404 }
       );
     }
 
-    let transcript: string;
-    let segments: { text: string; offset: number; duration: number }[] = [];
-    try {
-      const result = await fetchTranscriptWithSegments(videoId);
-      transcript = result.transcript;
-      segments = result.segments;
-    } catch {
+    if (transcriptResult.status === 'rejected') {
       return NextResponse.json(
         {
           success: false,
@@ -77,6 +74,9 @@ export async function POST(request: NextRequest) {
         { status: 404 }
       );
     }
+
+    const title = titleResult.value;
+    const { transcript, segments } = transcriptResult.value;
 
     const markdown = generateMarkdown(transcript, {
       title,
