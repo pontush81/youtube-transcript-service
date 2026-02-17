@@ -28,19 +28,14 @@ export async function fetchTranscript(url: string, token?: string): Promise<Tran
 }
 
 export async function fetchSummary(markdown: string): Promise<{ summary: string }> {
-  const res = await fetch(`${API_BASE}/api/chat`, {
+  const res = await fetch(`${API_BASE}/api/summary`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      message:
-        'Give me a summary with key takeaways of this transcript. Format: start with "## Key Takeaways" as bullet points, then "## Summary" as a short paragraph.',
-      context: markdown,
-    }),
+    body: JSON.stringify({ transcript: markdown }),
   });
 
   if (!res.ok) throw new Error(`Summary failed: ${res.status}`);
-  const data = await res.json();
-  return { summary: data.response };
+  return res.json();
 }
 
 export async function saveToLibrary(url: string, token: string): Promise<{ success: boolean }> {
