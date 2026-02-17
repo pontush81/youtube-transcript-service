@@ -20,6 +20,11 @@ export default function PricingPage() {
     if (params.get('success') === 'true') setSuccess(true);
     if (params.get('canceled') === 'true') setCanceled(true);
 
+    // Clean up URL params so they don't persist on refresh
+    if (params.has('success') || params.has('canceled')) {
+      window.history.replaceState({}, '', '/pricing');
+    }
+
     // Fetch usage
     fetch('/api/usage')
       .then((r) => r.json())
@@ -31,6 +36,11 @@ export default function PricingPage() {
     setLoading(true);
     try {
       const res = await fetch('/api/stripe/checkout', { method: 'POST' });
+      if (res.redirected || !res.ok && res.status !== 402) {
+        // Not authenticated — middleware redirected to sign-in
+        window.location.href = '/sign-in?redirect_url=/pricing';
+        return;
+      }
       const data = await res.json();
       if (data.url) {
         window.location.href = data.url;
@@ -39,8 +49,7 @@ export default function PricingPage() {
         setLoading(false);
       }
     } catch {
-      alert('Something went wrong');
-      setLoading(false);
+      window.location.href = '/sign-in?redirect_url=/pricing';
     }
   }
 
@@ -53,7 +62,7 @@ export default function PricingPage() {
         Transcripts are always free. Upgrade for unlimited AI features.
       </p>
 
-      {success && (
+      {success && isPro && (
         <div className="mb-8 p-4 bg-green-50 border border-green-200 rounded-lg text-center text-green-800">
           Welcome to Pro! Your account has been upgraded.
         </div>
