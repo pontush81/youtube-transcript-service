@@ -46,13 +46,14 @@ function seekVideo(seconds: number) {
 function highlightMatch(text: string, query: string): preact.JSX.Element {
   if (!query) return <>{text}</>;
 
-  const regex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
-  const parts = text.split(regex);
+  const splitRegex = new RegExp(`(${query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'gi');
+  const parts = text.split(splitRegex);
+  const lowerQuery = query.toLowerCase();
 
   return (
     <>
       {parts.map((part, i) =>
-        regex.test(part) ? (
+        part.toLowerCase() === lowerQuery ? (
           <span
             key={i}
             style={{

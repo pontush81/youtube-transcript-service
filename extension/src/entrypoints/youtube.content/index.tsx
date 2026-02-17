@@ -124,12 +124,13 @@ export default defineContentScript({
 
     await handleVideoPage();
 
-    // Handle YouTube SPA navigation
-    ctx.addEventListener(window, 'wxt:locationchange', () => {
-      handleVideoPage();
-    });
-    ctx.addEventListener(document, 'yt-navigate-finish' as any, () => {
-      handleVideoPage();
-    });
+    // Handle YouTube SPA navigation (debounce: both events fire per navigation)
+    let navTimer: ReturnType<typeof setTimeout> | null = null;
+    function onNavigation() {
+      if (navTimer) clearTimeout(navTimer);
+      navTimer = setTimeout(() => { navTimer = null; handleVideoPage(); }, 100);
+    }
+    ctx.addEventListener(window, 'wxt:locationchange', onNavigation);
+    ctx.addEventListener(document, 'yt-navigate-finish' as any, onNavigation);
   },
 });

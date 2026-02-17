@@ -9,9 +9,11 @@ interface Props {
 export function SaveButton({ videoId, auth }: Props) {
   const [saved, setSaved] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   async function handleSave() {
     setSaving(true);
+    setError(null);
     try {
       const response = await new Promise<any>((resolve) => {
         chrome.runtime.sendMessage(
@@ -23,9 +25,13 @@ export function SaveButton({ videoId, auth }: Props) {
           resolve,
         );
       });
-      if (response.success) setSaved(true);
+      if (response.success) {
+        setSaved(true);
+      } else {
+        setError(response.error || 'Save failed');
+      }
     } catch {
-      // ignore
+      setError('Could not reach server');
     } finally {
       setSaving(false);
     }
@@ -91,6 +97,11 @@ export function SaveButton({ videoId, auth }: Props) {
   // Saving or ready to save
   return (
     <div style={containerStyle}>
+      {error && (
+        <span style={{ fontSize: '12px', color: 'var(--error)', marginRight: '8px' }}>
+          {error}
+        </span>
+      )}
       <button
         onClick={handleSave}
         disabled={saving}
@@ -99,7 +110,7 @@ export function SaveButton({ videoId, auth }: Props) {
           ...(saving ? { opacity: '0.5', cursor: 'default' } : {}),
         }}
       >
-        {saving ? 'Saving...' : 'Save to library'}
+        {saving ? 'Saving...' : error ? 'Retry' : 'Save to library'}
       </button>
     </div>
   );
