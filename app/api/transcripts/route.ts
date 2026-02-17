@@ -39,28 +39,10 @@ export interface Category {
   videoCount: number;
 }
 
-// Extract title from Markdown content (first line is always "# {title}")
-function extractTitleFromMarkdown(content: string): string | null {
-  const firstLine = content.split('\n')[0];
-  if (firstLine?.startsWith('# ')) {
-    return firstLine.substring(2).trim();
-  }
-  return null;
-}
-
 export async function GET(request: NextRequest) {
   try {
     // Check if user is logged in
     const { userId } = await auth();
-
-    // Get user's transcripts if logged in
-    const userTranscriptIds = new Set<string>();
-    if (userId) {
-      const userTranscripts = await sql`
-        SELECT video_id FROM user_transcripts WHERE user_id = ${userId}
-      `;
-      userTranscripts.rows.forEach(r => userTranscriptIds.add(r.video_id));
-    }
 
     // Check for filters
     const showMyOnly = request.nextUrl.searchParams.get('my') === 'true';
@@ -68,23 +50,33 @@ export async function GET(request: NextRequest) {
     const categoryFilter = request.nextUrl.searchParams.get('category');
     const sortBy = request.nextUrl.searchParams.get('sort') || 'uploadedAt';
 
-    // Get cached titles from database (fast)
-    const cachedTitles = await sql`
-      SELECT DISTINCT ON (video_id) video_id, video_title, blob_url
-      FROM transcript_chunks
-      ORDER BY video_id, created_at DESC
-    `;
-    const titleCache = new Map(
-      cachedTitles.rows.map(r => [r.video_id, { title: r.video_title, blobUrl: r.blob_url }])
+    // Run all data fetches in parallel
+    const [userTranscriptsResult, cachedTitles, metadataResult, blobsResult] = await Promise.all([
+      userId
+        ? sql`SELECT video_id FROM user_transcripts WHERE user_id = ${userId}`
+        : Promise.resolve({ rows: [] }),
+      sql`
+        SELECT DISTINCT ON (video_id) video_id, video_title
+        FROM transcript_chunks
+        ORDER BY video_id, created_at DESC
+      `,
+      sql`SELECT * FROM video_metadata`,
+      list({ prefix: 'transcripts/' }),
+    ]);
+
+    const userTranscriptIds = new Set<string>(
+      userTranscriptsResult.rows.map(r => r.video_id)
     );
 
-    // Get video metadata
-    const metadataResult = await sql`SELECT * FROM video_metadata`;
+    const titleCache = new Map(
+      cachedTitles.rows.map(r => [r.video_id, r.video_title as string])
+    );
+
     const metadataMap = new Map(
       metadataResult.rows.map(r => [r.video_id, r])
     );
 
-    const { blobs } = await list({ prefix: 'transcripts/' });
+    const { blobs } = blobsResult;
 
     // Map to store unique videos by normalized ID (keep newest)
     const videoMap = new Map<string, {
@@ -108,56 +100,33 @@ export async function GET(request: NextRequest) {
       }
     }
 
-    // Build transcripts list - use cached titles when available
-    const allTranscripts: TranscriptItem[] = await Promise.all(
-      Array.from(videoMap.values()).map(async ({ blob, normalizedId }) => {
-        const isOwner = userTranscriptIds.has(normalizedId);
-        const metadata = metadataMap.get(normalizedId);
+    // Build transcripts list synchronously - no per-item fetches
+    const allTranscripts: TranscriptItem[] = Array.from(videoMap.values()).map(({ blob, normalizedId }) => {
+      const isOwner = userTranscriptIds.has(normalizedId);
+      const metadata = metadataMap.get(normalizedId);
 
-        // Try to get title from metadata, then cache, then fallback
-        let title = metadata?.title;
-        if (!title) {
-          const cached = titleCache.get(normalizedId);
-          title = cached?.title;
-        }
+      // Title priority: metadata > transcript_chunks cache > videoId
+      const title = metadata?.title || titleCache.get(normalizedId) || normalizedId;
 
-        if (!title) {
-          // Fallback: fetch from blob (slow path)
-          try {
-            const response = await fetch(blob.url);
-            if (response.ok) {
-              const text = await response.text();
-              const extractedTitle = extractTitleFromMarkdown(text);
-              if (extractedTitle) {
-                title = extractedTitle;
-              }
-            }
-          } catch {
-            // If file can't be fetched, use videoId
-          }
-        }
-
-        return {
-          videoId: normalizedId,
-          title: title || normalizedId,
-          url: blob.url,
-          uploadedAt: blob.uploadedAt,
-          size: blob.size,
-          indexed: titleCache.has(normalizedId),
-          isOwner,
-          // Metadata fields
-          thumbnailUrl: metadata?.thumbnail_url || undefined,
-          channelId: metadata?.channel_id || undefined,
-          channelName: metadata?.channel_name || undefined,
-          durationSeconds: metadata?.duration_seconds || undefined,
-          publishedAt: metadata?.published_at || undefined,
-          viewCount: metadata?.view_count || undefined,
-          tags: metadata?.tags || undefined,
-          categoryId: metadata?.category_id || undefined,
-          categoryName: metadata?.category_name || undefined,
-        };
-      })
-    );
+      return {
+        videoId: normalizedId,
+        title,
+        url: blob.url,
+        uploadedAt: blob.uploadedAt,
+        size: blob.size,
+        indexed: titleCache.has(normalizedId),
+        isOwner,
+        thumbnailUrl: metadata?.thumbnail_url || undefined,
+        channelId: metadata?.channel_id || undefined,
+        channelName: metadata?.channel_name || undefined,
+        durationSeconds: metadata?.duration_seconds || undefined,
+        publishedAt: metadata?.published_at || undefined,
+        viewCount: metadata?.view_count || undefined,
+        tags: metadata?.tags || undefined,
+        categoryId: metadata?.category_id || undefined,
+        categoryName: metadata?.category_name || undefined,
+      };
+    });
 
     // Apply filters
     let transcripts = allTranscripts;
@@ -262,7 +231,7 @@ export async function GET(request: NextRequest) {
   } catch (error) {
     console.error('Error listing transcripts:', error);
     return NextResponse.json(
-      { error: 'Kunde inte hämta transkript-lista' },
+      { success: false, error: 'Kunde inte hämta transkript-lista' },
       { status: 500 }
     );
   }

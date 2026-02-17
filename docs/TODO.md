@@ -23,10 +23,10 @@ Total genomgång av säkerhet, prestanda, arkitektur och kodkvalitet.
 - [x] **Next.js Image** — Bytt till Image-komponent + remotePatterns i next.config.ts
 - [x] **Redis borttaget** — Rate limiting flyttad till PostgreSQL, @upstash/* avinstallerat
 
-### Kvar (högt)
-- [ ] **N+1 queries i /api/transcripts** - `app/api/transcripts/route.ts:112-159` — loopar igenom varje blob med individuella DB-queries och fetch-anrop. Batch-ladda metadata.
-- [ ] **Noll tester** — Ingen testkonfiguration, inga testfiler. Lägg till Vitest + tester för kritiska flöden: auth, rate limiting, vector search, embeddings.
-- [ ] **Standardisera error responses** — Vissa endpoints returnerar `{ success, error }`, andra bara `{ error }`. Skapa gemensam felhanteringsfunktion.
+### Kvar (högt) ✅ Fixat 2026-02-17
+- [x] **N+1 queries** — DB-queries parallelliserade med Promise.all, blob-fetch-fallback borttagen
+- [x] **Tester** — Vitest + 40 tester: secureCompare, video-utils, validations, env, chunking, api-response
+- [x] **Error responses** — lib/api-response.ts helper, nyckel-routes uppdaterade till `{ success, error }`
 
 ---
 

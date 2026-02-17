@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { errorResponse, rateLimitResponse } from '@/lib/api-response';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { checkUsage, incrementUsage, getUserPlan } from '@/lib/usage';
 import { z } from 'zod';
@@ -27,10 +28,7 @@ export async function POST(request: NextRequest) {
   const rateLimit = await checkRateLimit('summary', clientId);
 
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      { error: 'Too many requests. Please wait.', retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000) },
-      { status: 429, headers: rateLimitHeaders(rateLimit) }
-    );
+    return rateLimitResponse(rateLimit);
   }
 
   // Daily usage gating (separate from IP rate limit above)
@@ -47,6 +45,7 @@ export async function POST(request: NextRequest) {
   if (!usage.allowed) {
     return NextResponse.json(
       {
+        success: false,
         error: 'Daily summary limit reached. Upgrade to Pro for unlimited summaries.',
         upgrade: true,
         used: usage.used,
@@ -58,7 +57,7 @@ export async function POST(request: NextRequest) {
 
   const apiKey = process.env.OPENAI_API_KEY;
   if (!apiKey) {
-    return NextResponse.json({ error: 'AI summarization not configured' }, { status: 503 });
+    return errorResponse('AI summarization not configured', 503);
   }
 
   try {
@@ -66,7 +65,7 @@ export async function POST(request: NextRequest) {
     const parsed = summaryRequestSchema.safeParse(raw);
 
     if (!parsed.success) {
-      return NextResponse.json({ error: parsed.error.issues[0]?.message || 'Invalid request' }, { status: 400 });
+      return errorResponse(parsed.error.issues[0]?.message || 'Invalid request', 400);
     }
 
     // Truncate to ~12k tokens worth of text to stay within limits
@@ -88,6 +87,6 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ summary });
   } catch (error) {
     console.error('Summary error:', error);
-    return NextResponse.json({ error: 'Failed to generate summary' }, { status: 500 });
+    return errorResponse('Failed to generate summary', 500);
   }
 }

@@ -6,7 +6,7 @@ import { getStripeSecretKey, getStripePricePro } from '@/lib/env';
 export async function POST() {
   const { userId } = await auth();
   if (!userId) {
-    return NextResponse.json({ error: 'Sign in required' }, { status: 401 });
+    return NextResponse.json({ success: false, error: 'Sign in required' }, { status: 401 });
   }
 
   try {
@@ -23,6 +23,6 @@ export async function POST() {
     return NextResponse.json({ url: session.url });
   } catch (error) {
     console.error('Stripe checkout error:', error);
-    return NextResponse.json({ error: 'Failed to create checkout session' }, { status: 500 });
+    return NextResponse.json({ success: false, error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

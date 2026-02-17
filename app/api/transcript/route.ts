@@ -3,7 +3,8 @@ import { extractVideoId, fetchTranscriptWithSegments, fetchVideoTitle } from '@/
 import { generateMarkdown } from '@/lib/markdown';
 import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
-import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
+import { checkRateLimit, getClientIdentifier } from '@/lib/rate-limit';
+import { errorResponse, rateLimitResponse } from '@/lib/api-response';
 import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
@@ -18,14 +19,7 @@ export async function POST(request: NextRequest) {
   const rateLimit = await checkRateLimit('transcript', clientId);
 
   if (!rateLimit.allowed) {
-    return NextResponse.json(
-      {
-        success: false,
-        error: 'Too many requests. Please wait.',
-        retryAfter: Math.ceil((rateLimit.resetAt - Date.now()) / 1000),
-      },
-      { status: 429, headers: rateLimitHeaders(rateLimit) }
-    );
+    return rateLimitResponse(rateLimit);
   }
 
   // Get user ID for linking transcript
