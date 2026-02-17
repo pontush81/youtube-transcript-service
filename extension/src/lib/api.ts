@@ -46,17 +46,6 @@ export async function fetchSummary(markdown: string): Promise<{ summary: string 
   return res.json();
 }
 
-export async function saveToLibrary(url: string): Promise<{ success: boolean; downloadUrl?: string; title?: string }> {
-  const res = await fetchWithTimeout(`${API_BASE}/api/transcript`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ url }),
-  });
-
-  if (!res.ok) throw new Error(`Save failed: ${res.status}`);
-  return res.json();
-}
-
 export async function chatWithVideo(
   videoId: string,
   message: string,

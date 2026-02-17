@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef, useCallback, useMemo } from 'preact/hooks';
 
-interface TranscriptSegment {
+export interface TranscriptSegment {
   timestamp: string;
   seconds: number;
   text: string;
@@ -12,8 +12,14 @@ interface ApiSegment {
   duration: number;
 }
 
+export interface TranscriptData {
+  title: string;
+  segments: TranscriptSegment[];
+}
+
 interface Props {
   videoId: string;
+  onTranscriptLoaded?: (data: TranscriptData) => void;
 }
 
 function formatTimestamp(seconds: number): string {
@@ -86,7 +92,7 @@ function stopYouTubeShortcuts(e: Event) {
   e.stopPropagation();
 }
 
-export function TranscriptTab({ videoId }: Props) {
+export function TranscriptTab({ videoId, onTranscriptLoaded }: Props) {
   const [segments, setSegments] = useState<TranscriptSegment[]>([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -135,7 +141,12 @@ export function TranscriptTab({ videoId }: Props) {
 
       if (response.success) {
         if (response.data.segments && response.data.segments.length > 0) {
-          setSegments(apiSegmentsToTranscript(response.data.segments));
+          const converted = apiSegmentsToTranscript(response.data.segments);
+          setSegments(converted);
+          onTranscriptLoaded?.({
+            title: response.data.title || '',
+            segments: converted,
+          });
         }
         setLoaded(true);
       } else {

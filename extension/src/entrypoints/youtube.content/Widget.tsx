@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'preact/hooks';
-import { TranscriptTab } from './tabs/TranscriptTab';
+import { TranscriptTab, type TranscriptData } from './tabs/TranscriptTab';
 import { SummaryTab } from './tabs/SummaryTab';
 import { ChatTab } from './tabs/ChatTab';
-import { SaveButton } from './SaveButton';
+import { DownloadBar } from './DownloadBar';
 
 type WidgetState = 'open' | 'minimized' | 'closed';
 type Tab = 'transcript' | 'summary' | 'chat';
@@ -21,6 +21,8 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
   const [widgetState, setWidgetState] = useState<WidgetState>('open');
   const [activeTab, setActiveTab] = useState<Tab>('transcript');
   const [initialized, setInitialized] = useState(false);
+  const [transcriptData, setTranscriptData] = useState<TranscriptData | null>(null);
+
   // Load persisted state on mount
   useEffect(() => {
     chrome.storage.local.get([STORAGE_KEY_STATE, STORAGE_KEY_TAB], (result) => {
@@ -241,15 +243,13 @@ export function Widget({ videoId, onOpen, onMinimize, onClose }: Props) {
           minHeight: 0,
         }}
       >
-        {activeTab === 'transcript' && <TranscriptTab videoId={videoId} />}
+        {activeTab === 'transcript' && <TranscriptTab videoId={videoId} onTranscriptLoaded={setTranscriptData} />}
         {activeTab === 'summary' && <SummaryTab videoId={videoId} />}
         {activeTab === 'chat' && <ChatTab videoId={videoId} />}
       </div>
 
-      {/* Action bar (sticky bottom) */}
-      <div style={{ flexShrink: 0 }}>
-        <SaveButton videoId={videoId} />
-      </div>
+      {/* Download bar (sticky bottom, visible when transcript loaded) */}
+      <DownloadBar videoId={videoId} transcriptData={transcriptData} />
     </div>
   );
 }
