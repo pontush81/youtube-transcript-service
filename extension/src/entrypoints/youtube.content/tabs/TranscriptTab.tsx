@@ -24,13 +24,20 @@ function formatTimestamp(seconds: number): string {
   return `${m}:${String(s).padStart(2, '0')}`;
 }
 
+/** Decode HTML entities like &#39; &amp; &gt; etc. */
+function decodeHtmlEntities(text: string): string {
+  const el = document.createElement('textarea');
+  el.innerHTML = text;
+  return el.value;
+}
+
 function apiSegmentsToTranscript(apiSegments: ApiSegment[]): TranscriptSegment[] {
   return apiSegments.map((seg) => {
     const seconds = seg.offset / 1000; // Supadata offset is in milliseconds
     return {
       timestamp: formatTimestamp(seconds),
       seconds,
-      text: seg.text,
+      text: decodeHtmlEntities(seg.text),
     };
   });
 }
