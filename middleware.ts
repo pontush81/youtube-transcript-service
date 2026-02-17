@@ -12,6 +12,7 @@ const isPublicRoute = createRouteMatcher([
   '/api/transcript',     // Chrome extension + public use (has rate limiting)
   '/api/summary',        // Chrome extension summary (has rate limiting)
   '/api/chat/extension', // Chrome extension chat (has rate limiting)
+  '/api/usage',          // Usage status (works for both authed and anon)
   '/api/db/(.*)',        // Admin DB routes (use admin key)
   '/api/metadata/(.*)',  // Metadata backfill (use admin key)
   '/api/admin/(.*)',     // Admin routes (use admin key or Clerk admin role)
