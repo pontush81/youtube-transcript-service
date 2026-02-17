@@ -25,11 +25,14 @@ function formatTimestamp(seconds: number): string {
 }
 
 function apiSegmentsToTranscript(apiSegments: ApiSegment[]): TranscriptSegment[] {
-  return apiSegments.map((seg) => ({
-    timestamp: formatTimestamp(seg.offset),
-    seconds: seg.offset,
-    text: seg.text,
-  }));
+  return apiSegments.map((seg) => {
+    const seconds = seg.offset / 1000; // Supadata offset is in milliseconds
+    return {
+      timestamp: formatTimestamp(seconds),
+      seconds,
+      text: seg.text,
+    };
+  });
 }
 
 function seekVideo(seconds: number) {
