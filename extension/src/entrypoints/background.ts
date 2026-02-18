@@ -1,11 +1,20 @@
 import { fetchTranscript, fetchSummary, chatWithVideo } from '../lib/api';
 
+async function getStoredToken(): Promise<string | null> {
+  const result = await chrome.storage.local.get('authToken');
+  return result.authToken || null;
+}
+
 export default defineBackground(() => {
   chrome.runtime.onMessage.addListener((message, _sender, sendResponse) => {
     handleMessage(message)
       .then(sendResponse)
       .catch((err) => {
-        sendResponse({ success: false, error: err.message });
+        sendResponse({
+          success: false,
+          error: err.message,
+          upgrade: err.upgrade || false,
+        });
       });
     return true; // async response
   });
@@ -13,19 +22,22 @@ export default defineBackground(() => {
   async function handleMessage(message: any): Promise<any> {
     switch (message.type) {
       case 'FETCH_TRANSCRIPT': {
-        const data = await fetchTranscript(message.url, message.token);
+        const token = message.token || (await getStoredToken());
+        const data = await fetchTranscript(message.url, token);
         return { success: true, data };
       }
       case 'SUMMARIZE': {
-        const data = await fetchSummary(message.markdown);
+        const token = message.token || (await getStoredToken());
+        const data = await fetchSummary(message.markdown, token);
         return { success: true, data };
       }
       case 'CHAT': {
+        const token = message.token || (await getStoredToken());
         const response = await chatWithVideo(
           message.videoId,
           message.message,
           message.history || [],
-          message.token,
+          token,
         );
         return { success: true, response };
       }

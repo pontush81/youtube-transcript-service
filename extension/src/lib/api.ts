@@ -35,14 +35,23 @@ export async function fetchTranscript(url: string, token?: string): Promise<Tran
   return res.json();
 }
 
-export async function fetchSummary(markdown: string): Promise<{ summary: string }> {
+export async function fetchSummary(markdown: string, token?: string | null): Promise<{ summary: string }> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetchWithTimeout(`${API_BASE}/api/summary`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({ transcript: markdown }),
   });
 
-  if (!res.ok) throw new Error(`Summary failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 402 && body.upgrade) {
+      throw Object.assign(new Error(body.error || 'Usage limit reached'), { upgrade: true, status: 402 });
+    }
+    throw new Error(`Summary failed: ${res.status}`);
+  }
   return res.json();
 }
 
@@ -50,11 +59,14 @@ export async function chatWithVideo(
   videoId: string,
   message: string,
   history: ChatMessage[],
-  _token: string,
+  token?: string | null,
 ): Promise<string> {
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
   const res = await fetchWithTimeout(`${API_BASE}/api/chat/extension`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers,
     body: JSON.stringify({
       videoId,
       message,
@@ -62,7 +74,13 @@ export async function chatWithVideo(
     }),
   });
 
-  if (!res.ok) throw new Error(`Chat failed: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.json().catch(() => ({}));
+    if (res.status === 402 && body.upgrade) {
+      throw Object.assign(new Error(body.error || 'Usage limit reached'), { upgrade: true, status: 402 });
+    }
+    throw new Error(`Chat failed: ${res.status}`);
+  }
   const data = await res.json();
   return data.response;
 }

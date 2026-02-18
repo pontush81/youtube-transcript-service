@@ -124,6 +124,7 @@ export function SummaryTab({ videoId, onSummaryLoaded }: Props) {
   const [summary, setSummary] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [upgradePrompt, setUpgradePrompt] = useState<string | null>(null);
 
   // Check cache on mount
   useEffect(() => {
@@ -139,6 +140,7 @@ export function SummaryTab({ videoId, onSummaryLoaded }: Props) {
   async function generateSummary() {
     setLoading(true);
     setError(null);
+    setUpgradePrompt(null);
 
     try {
       // Step 1: fetch transcript
@@ -167,6 +169,8 @@ export function SummaryTab({ videoId, onSummaryLoaded }: Props) {
         setSummary(summaryRes.data.summary);
         onSummaryLoaded?.(summaryRes.data.summary);
         chrome.storage.local.set({ [`summary_${videoId}`]: summaryRes.data.summary });
+      } else if (summaryRes.upgrade) {
+        setUpgradePrompt(summaryRes.error || 'Daily summary limit reached. Upgrade to Pro for unlimited summaries.');
       } else {
         setError(summaryRes.error || 'Summary generation failed');
       }
@@ -180,6 +184,42 @@ export function SummaryTab({ videoId, onSummaryLoaded }: Props) {
   // Loading state: skeleton loader
   if (loading) {
     return <SkeletonLoader />;
+  }
+
+  // Upgrade prompt
+  if (upgradePrompt) {
+    return (
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'column',
+          alignItems: 'center',
+          gap: '12px',
+          padding: '32px 16px',
+          textAlign: 'center',
+        }}
+      >
+        <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+          {upgradePrompt}
+        </p>
+        <button
+          onClick={() => window.open('https://youtube-transcript-service-two.vercel.app/pricing', '_blank')}
+          style={{
+            padding: '10px 24px',
+            fontSize: '14px',
+            fontWeight: 500,
+            fontFamily: 'Roboto, Arial, sans-serif',
+            color: '#ffffff',
+            backgroundColor: 'var(--accent)',
+            border: 'none',
+            borderRadius: '18px',
+            cursor: 'pointer',
+          }}
+        >
+          Upgrade to Pro
+        </button>
+      </div>
+    );
   }
 
   // Error state with retry

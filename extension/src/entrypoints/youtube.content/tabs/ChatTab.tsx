@@ -25,6 +25,7 @@ export function ChatTab({ videoId, onMessagesChanged }: Props) {
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [upgradePrompt, setUpgradePrompt] = useState<string | null>(null);
   const messagesContainerRef = useRef<HTMLDivElement>(null);
 
   // Auto-scroll to bottom on new messages
@@ -65,6 +66,8 @@ export function ChatTab({ videoId, onMessagesChanged }: Props) {
 
       if (response.success) {
         setMessages((prev) => [...prev, { role: 'assistant', content: response.response }]);
+      } else if (response.upgrade) {
+        setUpgradePrompt(response.error || 'Daily chat limit reached. Upgrade to Pro for unlimited chat.');
       } else {
         setMessages((prev) => [
           ...prev,
@@ -216,6 +219,40 @@ export function ChatTab({ videoId, onMessagesChanged }: Props) {
             >
               Thinking...
             </div>
+          </div>
+        )}
+
+        {/* Upgrade prompt */}
+        {upgradePrompt && (
+          <div
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              gap: '10px',
+              padding: '16px',
+              textAlign: 'center',
+            }}
+          >
+            <p style={{ fontSize: '13px', color: 'var(--text-secondary)', lineHeight: 1.5, margin: 0 }}>
+              {upgradePrompt}
+            </p>
+            <button
+              onClick={() => window.open('https://youtube-transcript-service-two.vercel.app/pricing', '_blank')}
+              style={{
+                padding: '8px 20px',
+                fontSize: '13px',
+                fontWeight: 500,
+                fontFamily: 'Roboto, Arial, sans-serif',
+                color: '#ffffff',
+                backgroundColor: 'var(--accent)',
+                border: 'none',
+                borderRadius: '18px',
+                cursor: 'pointer',
+              }}
+            >
+              Upgrade to Pro
+            </button>
           </div>
         )}
 
