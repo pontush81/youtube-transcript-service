@@ -3,20 +3,15 @@
  * Stores embeddings by text hash with TTL.
  */
 
+import { createHash } from 'crypto';
+
 interface CacheEntry {
   embedding: number[];
   expiresAt: number;
 }
 
-// Simple hash function for cache keys
 function hashText(text: string): string {
-  let hash = 0;
-  for (let i = 0; i < text.length; i++) {
-    const char = text.charCodeAt(i);
-    hash = ((hash << 5) - hash) + char;
-    hash = hash & hash; // Convert to 32bit integer
-  }
-  return hash.toString(36);
+  return createHash('sha256').update(text).digest('hex');
 }
 
 class EmbeddingCache {

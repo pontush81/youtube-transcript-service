@@ -12,7 +12,6 @@
     "test:watch": "vitest"
   },
   "dependencies": {
-    "@auth/pg-adapter": "^1.11.1",
     "@clerk/localizations": "^3.35.1",
     "@clerk/nextjs": "^6.36.9",
     "@tailwindcss/postcss": "^4.1.18",

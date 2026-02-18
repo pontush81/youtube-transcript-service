@@ -7,7 +7,7 @@ import { secureCompare } from '@/lib/admin';
 
 // Removed edge runtime - youtube-transcript requires Node.js
 
-export async function GET(request: NextRequest) {
+async function handleWebhook(request: NextRequest) {
   // API key authentication
   const apiKey = request.nextUrl.searchParams.get('key') || request.headers.get('x-api-key');
   const validKey = process.env.WEBHOOK_API_KEY || process.env.ADMIN_KEY;
@@ -92,3 +92,6 @@ export async function GET(request: NextRequest) {
     transcriptLength: transcript.length,
   });
 }
+
+// Support both GET (legacy/Zapier) and POST
+export { handleWebhook as GET, handleWebhook as POST };

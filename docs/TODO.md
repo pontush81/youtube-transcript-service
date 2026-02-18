@@ -57,15 +57,17 @@ Total genomgång av säkerhet, prestanda, arkitektur och kodkvalitet.
 
 ## ⚪ Lågt (nice-to-have)
 
+- [x] **Embedding cache** — Bytt från 32-bit hash till SHA-256 (`crypto.createHash`)
+- [x] **Unused dependencies** — `@auth/pg-adapter` avinstallerad (`@clerk/localizations` används för sv-SE)
+- [x] **Webhook GET → POST** — Stödjer nu båda (GET kvar för Zapier bakåtkompatibilitet)
+- [x] **Ta bort debug-endpoint** — Redan borttagen
+
+### Kvar (lågt)
 - [ ] **Clerk production keys** - Byt från development till production
 - [ ] **Favicon** - Lägg till favicon
 - [ ] **Stripe test → live** - Byt nycklar och skapa produkter i live-läge
-- [ ] **Ta bort debug-endpoint** - `/api/debug-transcript` är temporär
 - [ ] **Usage history page** - Visa detaljerad användningshistorik
-- [ ] **Embedding cache använder svag hash** - `lib/ai/embedding-cache.ts:11-20` — 32-bit hash ger kollisionsrisk, byt till `crypto.createHash('sha256')`
-- [ ] **Unused dependencies** - `@auth/pg-adapter` (NextAuth-rest), eventuellt `@clerk/localizations`
 - [ ] **API-versionering** - Inget `/api/v1/` prefix, breaking changes drabbar klienter direkt
-- [ ] **Webhook GET → POST** - `/api/webhook` använder GET med sidoeffekter
 
 ---
 
