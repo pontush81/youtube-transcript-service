@@ -10,6 +10,7 @@ import { generateMarkdown } from '@/lib/markdown';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 const addContentSchema = z.object({
   url: z.string().url('Ogiltig URL'),
@@ -58,7 +59,7 @@ export async function POST(request: NextRequest) {
       return handleWebContent(url, userId);
     }
   } catch (error) {
-    console.error('Add content error:', error);
+    logger.error('Add content error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Ett oväntat fel uppstod' },
       { status: 500 }
@@ -117,7 +118,7 @@ async function handleYouTube(url: string, userId: string) {
   try {
     await fetchAndSaveVideoMetadata(videoId);
   } catch (error) {
-    console.error('Failed to save video metadata:', error);
+    logger.error('Failed to save video metadata', { error: error instanceof Error ? error.message : String(error) });
   }
 
   // Save to user_transcripts

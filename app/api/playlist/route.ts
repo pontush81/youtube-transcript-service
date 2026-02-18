@@ -12,6 +12,7 @@ import { saveToBlob } from '@/lib/storage';
 import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { sql } from '@/lib/db';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 300; // 5 minutes for playlist processing
 
@@ -47,7 +48,7 @@ export async function GET(request: NextRequest) {
       videos: videos.slice(0, 50), // Limit to 50 videos
     });
   } catch (error) {
-    console.error('Playlist fetch error:', error);
+    logger.error('Playlist fetch error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Kunde inte hämta spellistan' },
       { status: 500 }
@@ -161,7 +162,7 @@ export async function POST(request: NextRequest) {
       summary: { successful, failed, total: videoIds.length },
     });
   } catch (error) {
-    console.error('Playlist process error:', error);
+    logger.error('Playlist process error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Kunde inte bearbeta spellistan' },
       { status: 500 }

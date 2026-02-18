@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@/lib/db';
 import { fetchVideoMetadata } from '@/lib/youtube';
 import { hasValidAdminKey } from '@/lib/admin';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 300; // 5 minutes
 
@@ -90,7 +91,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('Category update error:', error);
+    logger.error('Category update error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Update failed' },
       { status: 500 }

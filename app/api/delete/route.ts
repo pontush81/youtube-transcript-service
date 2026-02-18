@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rat
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 import { secureCompare } from '@/lib/admin';
+import { logger } from '@/lib/logger';
 
 // Schema for single delete (legacy support)
 const singleDeleteSchema = z.object({
@@ -113,7 +114,7 @@ export async function POST(request: NextRequest) {
 
           results.push({ videoId, success: true });
         } catch (err) {
-          console.error(`Delete error for ${videoId}:`, err);
+          logger.error('Delete error', { videoId, error: err instanceof Error ? err.message : String(err) });
           results.push({
             videoId,
             success: false,
@@ -180,7 +181,7 @@ export async function POST(request: NextRequest) {
       message: 'Transcript has been deleted',
     });
   } catch (error) {
-    console.error('Delete error:', error);
+    logger.error('Delete error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'Could not delete the transcript' },
       { status: 500 }

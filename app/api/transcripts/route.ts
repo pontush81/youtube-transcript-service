@@ -3,6 +3,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
 import { sql } from '@/lib/db';
 import { auth } from '@clerk/nextjs/server';
+import { logger } from '@/lib/logger';
 
 // Remove edge runtime - need nodejs for database access
 // export const runtime = 'edge';
@@ -236,7 +237,7 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error('Error listing transcripts:', error);
+    logger.error('Error listing transcripts', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'Kunde inte hämta transkript-lista' },
       { status: 500 }

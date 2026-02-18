@@ -49,8 +49,8 @@ Total genomgång av säkerhet, prestanda, arkitektur och kodkvalitet.
 - [x] **Hårdkodad ADMIN_EMAIL** — Flyttad till env-variabel med fallback
 
 ### Kvar (medium)
-- [ ] **IVFFlat index drop blockar queries** - `lib/db-schema.ts` — `CREATE INDEX CONCURRENTLY` kräver att det körs utanför transaktion, behöver separat migration-endpoint.
-- [ ] **Strukturerad loggning** — 35+ `console.log/error/warn` utan format, timestamps eller request-IDs. Överväg pino eller liknande.
+- [x] **IVFFlat index** — setupDatabase droppar inte längre index; optimizeVectorIndex använder CONCURRENTLY
+- [x] **Strukturerad loggning** — lib/logger.ts (JSON i prod, human-readable i dev), 37 console-anrop ersatta i 28 filer
 - [ ] **Foreign key transcript_chunks → video_metadata** — Kräver arkitekturändringar: chunks sparas ibland före metadata, FK skulle blockera inserts.
 
 ---
@@ -62,9 +62,11 @@ Total genomgång av säkerhet, prestanda, arkitektur och kodkvalitet.
 - [x] **Webhook GET → POST** — Stödjer nu båda (GET kvar för Zapier bakåtkompatibilitet)
 - [x] **Ta bort debug-endpoint** — Redan borttagen
 
+- [x] **Favicon** — SVG play-ikon (app/icon.svg)
+- [x] **Usage history page** — /usage med daglig historik, periodväljare (7/30/90d), totaler
+
 ### Kvar (lågt)
 - [ ] **Clerk production keys** - Byt från development till production
-- [ ] **Favicon** - Lägg till favicon
 - [ ] **Stripe test → live** - Byt nycklar och skapa produkter i live-läge
 - [ ] **Usage history page** - Visa detaljerad användningshistorik
 - [ ] **API-versionering** - Inget `/api/v1/` prefix, breaking changes drabbar klienter direkt

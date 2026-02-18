@@ -3,6 +3,7 @@ import { headers } from 'next/headers';
 import { WebhookEvent } from '@clerk/nextjs/server';
 import { sql } from '@vercel/postgres';
 import { Resend } from 'resend';
+import { logger } from '@/lib/logger';
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'pontus.hberg@gmail.com';
 
@@ -43,7 +44,7 @@ export async function POST(req: Request) {
       'svix-signature': svix_signature,
     }) as WebhookEvent;
   } catch (err) {
-    console.error('Webhook verification failed:', err);
+    logger.error('Webhook verification failed', { error: err instanceof Error ? err.message : String(err) });
     return new Response('Webhook verification failed', { status: 400 });
   }
 
@@ -83,7 +84,7 @@ export async function POST(req: Request) {
           `,
         });
         } catch (error) {
-          console.error('Failed to send new user notification:', error);
+          logger.error('Failed to send new user notification', { error: error instanceof Error ? error.message : String(error) });
         }
       }
     }

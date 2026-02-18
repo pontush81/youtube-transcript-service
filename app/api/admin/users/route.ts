@@ -6,6 +6,7 @@ import {
   UserRole,
 } from '@/lib/admin';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 // GET - List all users with roles
 export async function GET(request: NextRequest) {
@@ -19,7 +20,7 @@ export async function GET(request: NextRequest) {
     const users = await getAllUsersWithRoles();
     return NextResponse.json({ users });
   } catch (error) {
-    console.error('Failed to fetch users:', error);
+    logger.error('Failed to fetch users', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Failed to fetch users' },
       { status: 500 }
@@ -59,7 +60,7 @@ export async function PATCH(request: NextRequest) {
       message: `User ${userId} role updated to ${role}`,
     });
   } catch (error) {
-    console.error('Failed to update user role:', error);
+    logger.error('Failed to update user role', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: 'Failed to update user role' },
       { status: 500 }

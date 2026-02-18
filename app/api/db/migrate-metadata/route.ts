@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasValidAdminKey } from '@/lib/admin';
 import { sql } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   if (!hasValidAdminKey(request)) {
@@ -49,7 +50,7 @@ export async function POST(request: NextRequest) {
       message: 'video_metadata table created successfully',
     });
   } catch (error) {
-    console.error('Migration error:', error);
+    logger.error('Migration error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Migration failed' },
       { status: 500 }

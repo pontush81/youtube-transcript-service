@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasValidAdminKey } from '@/lib/admin';
 import { sql } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   if (!hasValidAdminKey(request)) {
@@ -24,7 +25,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ success: true, message: 'daily_usage table created' });
   } catch (error) {
-    console.error('Usage migration error:', error);
+    logger.error('Usage migration error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ success: false, error: 'Migration failed' }, { status: 500 });
   }
 }

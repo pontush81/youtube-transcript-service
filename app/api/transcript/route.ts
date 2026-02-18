@@ -9,6 +9,7 @@ import { transcriptSubmitSchema, parseRequest } from '@/lib/validations';
 import { auth } from '@clerk/nextjs/server';
 import { sql } from '@/lib/db';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
+import { logger } from '@/lib/logger';
 
 // Remove edge runtime - Vercel Postgres doesn't work with Edge
 // export const runtime = 'edge';
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
       };
     } catch (error) {
       // Log but don't fail - embeddings are optional
-      console.error('Failed to create embeddings:', error);
+      logger.error('Failed to create embeddings', { error: error instanceof Error ? error.message : String(error) });
     }
 
     // Fetch and save video metadata (channel, duration, thumbnail, etc.)
@@ -116,7 +117,7 @@ export async function POST(request: NextRequest) {
       await fetchAndSaveVideoMetadata(videoId);
     } catch (error) {
       // Log but don't fail - metadata is optional
-      console.error('Failed to save video metadata:', error);
+      logger.error('Failed to save video metadata', { error: error instanceof Error ? error.message : String(error) });
     }
 
     // Link transcript to user if logged in
@@ -131,7 +132,7 @@ export async function POST(request: NextRequest) {
         `;
       } catch (error) {
         // Log but don't fail - linking is optional
-        console.error('Failed to link transcript to user:', error);
+        logger.error('Failed to link transcript to user', { error: error instanceof Error ? error.message : String(error) });
       }
     }
 

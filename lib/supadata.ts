@@ -3,6 +3,8 @@
  * Fetches YouTube transcripts reliably via Supadata's infrastructure
  */
 
+import { logger } from '@/lib/logger';
+
 const SUPADATA_API_URL = 'https://api.supadata.ai/v1';
 
 export interface TranscriptSegment {
@@ -92,9 +94,11 @@ export async function fetchTranscript(
     throw new Error('Transkriptet var tomt');
   }
 
-  console.log(
-    `Supadata: Transcript fetched in ${data.lang}, ${transcript.length} chars, ${segments.length} segments`
-  );
+  logger.info('Supadata: Transcript fetched', {
+    lang: data.lang,
+    chars: transcript.length,
+    segments: segments.length,
+  });
 
   return {
     transcript,

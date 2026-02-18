@@ -5,6 +5,7 @@ import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rat
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { checkUsage, incrementUsage, getUserPlan } from '@/lib/usage';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 30;
 
@@ -102,7 +103,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ response });
   } catch (error) {
-    console.error('Chat extension error:', error);
+    logger.error('Chat extension error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ error: 'Failed to generate response' }, { status: 500 });
   }
 }

@@ -5,6 +5,7 @@ import { errorResponse, rateLimitResponse } from '@/lib/api-response';
 import { auth, clerkClient } from '@clerk/nextjs/server';
 import { checkUsage, incrementUsage, getUserPlan } from '@/lib/usage';
 import { z } from 'zod';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 30;
 
@@ -86,7 +87,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ summary });
   } catch (error) {
-    console.error('Summary error:', error);
+    logger.error('Summary error', { error: error instanceof Error ? error.message : String(error) });
     return errorResponse('Failed to generate summary', 500);
   }
 }

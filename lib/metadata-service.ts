@@ -1,4 +1,5 @@
 import { YOUTUBE_CATEGORIES, VideoMetadata } from './youtube';
+import { logger } from '@/lib/logger';
 
 /**
  * YouTube oEmbed response
@@ -131,7 +132,7 @@ async function fetchOEmbedMetadata(videoId: string): Promise<Partial<VideoMetada
       categoryName: null,
     };
   } catch (error) {
-    console.error('oEmbed fetch failed:', error);
+    logger.error('oEmbed fetch failed', { error: error instanceof Error ? error.message : String(error) });
     return {
       videoId,
       title: `Video ${videoId}`,
@@ -169,7 +170,7 @@ async function fetchYouTubeApiMetadata(videoId: string): Promise<VideoMetadata |
 
     if (!response.ok) {
       if (response.status === 403) {
-        console.error('YouTube API quota exceeded or key invalid');
+        logger.error('YouTube API quota exceeded or key invalid');
       }
       return null;
     }
@@ -209,7 +210,7 @@ async function fetchYouTubeApiMetadata(videoId: string): Promise<VideoMetadata |
       categoryName: categoryId ? YOUTUBE_CATEGORIES[categoryId] || null : null,
     };
   } catch (error) {
-    console.error('YouTube API fetch failed:', error);
+    logger.error('YouTube API fetch failed', { error: error instanceof Error ? error.message : String(error) });
     return null;
   }
 }

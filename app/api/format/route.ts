@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
 import { formatRequestSchema, parseRequest } from '@/lib/validations';
 import { auth } from '@clerk/nextjs/server';
+import { logger } from '@/lib/logger';
 
 // Vercel free tier har 10s timeout
 export const maxDuration = 10;
@@ -99,7 +100,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    console.log(`Simple formatting for "${title}", transcript length: ${transcript.length}`);
+    logger.info('Simple formatting', { title, transcriptLength: transcript.length });
 
     // Enkel formatering utan AI
     const formatted = simpleFormat(transcript);
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
       message: 'Transcript has been formatted',
     });
   } catch (error) {
-    console.error('Format error:', error);
+    logger.error('Format error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred during formatting' },
       { status: 500 }

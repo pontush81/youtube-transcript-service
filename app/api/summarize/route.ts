@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { put, del } from '@vercel/blob';
 import { auth } from '@clerk/nextjs/server';
 import { isValidBlobUrl } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 60;
 
@@ -113,7 +114,7 @@ ${transcript.substring(0, 12000)}
     });
 
     if (!response.ok) {
-      console.error('OpenAI API error:', response.status);
+      logger.error('OpenAI API error', { status: response.status });
       return NextResponse.json(
         { success: false, error: 'AI summary generation failed' },
         { status: 500 }
@@ -154,7 +155,7 @@ ${transcript.substring(0, 12000)}
       message: 'Summary has been added',
     });
   } catch (error) {
-    console.error('Summarize error:', error);
+    logger.error('Summarize error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'An unexpected error occurred' },
       { status: 500 }

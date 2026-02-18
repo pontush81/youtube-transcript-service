@@ -116,32 +116,8 @@ export async function setupDatabase() {
     ON transcript_chunks (video_id, created_at)
   `;
 
-  // For IVFFlat, check row count and create/recreate index if needed
-  // IVFFlat requires rows to exist for optimal training
-  const countResult = await sql`SELECT COUNT(*) as count FROM transcript_chunks`;
-  const rowCount = parseInt(countResult.rows[0]?.count || '0', 10);
-
-  if (rowCount > 0) {
-    const optimalLists = calculateOptimalLists(rowCount);
-
-    // Drop and recreate index with optimal lists value
-    // Note: In production, you might want to use CONCURRENTLY
-    await sql`DROP INDEX IF EXISTS transcript_chunks_embedding_idx`;
-    await sql.query(`
-      CREATE INDEX transcript_chunks_embedding_idx
-      ON transcript_chunks
-      USING ivfflat (embedding vector_cosine_ops)
-      WITH (lists = ${optimalLists})
-    `);
-
-    return {
-      success: true,
-      rowCount,
-      indexLists: optimalLists,
-    };
-  }
-
-  // For empty tables, create a basic index that will be rebuilt later
+  // Create vector index if it doesn't exist (non-blocking).
+  // Use optimizeVectorIndex() separately during low-traffic to tune parameters.
   await sql`
     CREATE INDEX IF NOT EXISTS transcript_chunks_embedding_idx
     ON transcript_chunks
@@ -149,12 +125,16 @@ export async function setupDatabase() {
     WITH (lists = 10)
   `;
 
-  return { success: true, rowCount: 0, indexLists: 10 };
+  const countResult = await sql`SELECT COUNT(*) as count FROM transcript_chunks`;
+  const rowCount = parseInt(countResult.rows[0]?.count || '0', 10);
+
+  return { success: true, rowCount, indexLists: 10 };
 }
 
 /**
  * Optimize the vector index based on current data size.
  * Call this after bulk inserts to ensure optimal search performance.
+ * Uses CONCURRENTLY to avoid blocking queries during reindex.
  */
 export async function optimizeVectorIndex(): Promise<{ rowCount: number; lists: number }> {
   const countResult = await sql`SELECT COUNT(*) as count FROM transcript_chunks`;
@@ -166,14 +146,17 @@ export async function optimizeVectorIndex(): Promise<{ rowCount: number; lists: 
 
   const optimalLists = calculateOptimalLists(rowCount);
 
-  // Rebuild index with optimal parameters
-  await sql`DROP INDEX IF EXISTS transcript_chunks_embedding_idx`;
+  // Build new index concurrently (non-blocking), then swap
   await sql.query(`
-    CREATE INDEX transcript_chunks_embedding_idx
+    CREATE INDEX CONCURRENTLY IF NOT EXISTS transcript_chunks_embedding_new_idx
     ON transcript_chunks
     USING ivfflat (embedding vector_cosine_ops)
     WITH (lists = ${optimalLists})
   `);
+
+  // Drop old index and rename new one
+  await sql.query(`DROP INDEX IF EXISTS transcript_chunks_embedding_idx`);
+  await sql.query(`ALTER INDEX transcript_chunks_embedding_new_idx RENAME TO transcript_chunks_embedding_idx`);
 
   return { rowCount, lists: optimalLists };
 }

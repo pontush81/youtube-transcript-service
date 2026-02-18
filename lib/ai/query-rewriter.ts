@@ -1,5 +1,6 @@
 import OpenAI from 'openai';
 import { Message } from './types';
+import { logger } from '@/lib/logger';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
@@ -73,7 +74,7 @@ Rewritten query:`
 
     return rewritten;
   } catch (error) {
-    console.error('Query rewrite failed:', error);
+    logger.error('Query rewrite failed', { error: error instanceof Error ? error.message : String(error) });
     return query; // Fallback to original
   }
 }

@@ -5,6 +5,7 @@ import { saveTranscriptEmbeddings } from '@/lib/embeddings';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
 import { optimizeVectorIndex } from '@/lib/db-schema';
 import { hasValidAdminKey } from '@/lib/admin';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   if (!hasValidAdminKey(request)) {
@@ -123,7 +124,7 @@ export async function POST(request: NextRequest) {
       try {
         indexOptimization = await optimizeVectorIndex();
       } catch (error) {
-        console.error('Failed to optimize index:', error);
+        logger.error('Failed to optimize index', { error: error instanceof Error ? error.message : String(error) });
       }
     }
 
@@ -140,7 +141,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('Backfill error:', error);
+    logger.error('Backfill error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: 'Backfill failed' },
       { status: 500 }

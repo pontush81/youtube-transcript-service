@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { auth } from '@clerk/nextjs/server';
 import Stripe from 'stripe';
 import { getStripeSecretKey, getStripePricePro } from '@/lib/env';
+import { logger } from '@/lib/logger';
 
 export async function POST() {
   const { userId } = await auth();
@@ -22,7 +23,7 @@ export async function POST() {
 
     return NextResponse.json({ url: session.url });
   } catch (error) {
-    console.error('Stripe checkout error:', error);
+    logger.error('Stripe checkout error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json({ success: false, error: 'Failed to create checkout session' }, { status: 500 });
   }
 }

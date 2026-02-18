@@ -5,6 +5,7 @@ import { sql } from '@/lib/db';
 import { fetchAndSaveVideoMetadata } from '@/lib/video-metadata';
 import { extractYouTubeVideoId } from '@/lib/video-utils';
 import { hasValidAdminKey, isUserAdmin } from '@/lib/admin';
+import { logger } from '@/lib/logger';
 
 export const maxDuration = 300; // 5 minutes for backfill
 
@@ -89,7 +90,7 @@ export async function POST(request: NextRequest) {
       results,
     });
   } catch (error) {
-    console.error('Backfill error:', error);
+    logger.error('Backfill error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Backfill failed' },
       { status: 500 }
@@ -137,7 +138,7 @@ export async function GET(request: NextRequest) {
         : 100,
     });
   } catch (error) {
-    console.error('Status check error:', error);
+    logger.error('Status check error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { error: error instanceof Error ? error.message : 'Status check failed' },
       { status: 500 }

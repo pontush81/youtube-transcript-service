@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { hasValidAdminKey } from '@/lib/admin';
 import { sql } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 export async function POST(request: NextRequest) {
   if (!hasValidAdminKey(request)) {
@@ -23,7 +24,7 @@ export async function POST(request: NextRequest) {
       message: 'rate_limits table created successfully',
     });
   } catch (error) {
-    console.error('Migration error:', error);
+    logger.error('Migration error', { error: error instanceof Error ? error.message : String(error) });
     return NextResponse.json(
       { success: false, error: error instanceof Error ? error.message : 'Migration failed' },
       { status: 500 }

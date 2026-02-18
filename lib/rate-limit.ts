@@ -5,6 +5,7 @@
  */
 
 import { sql } from '@/lib/db';
+import { logger } from '@/lib/logger';
 
 // Rate limits per endpoint (requests per minute)
 const LIMITS: Record<string, number> = {
@@ -62,7 +63,7 @@ export async function checkRateLimit(
     return { allowed, remaining, resetAt, limit };
   } catch (error) {
     // If DB fails, fail closed to prevent abuse
-    console.error('Rate limit check failed:', error);
+    logger.error('Rate limit check failed', { error: error instanceof Error ? error.message : String(error) });
     return {
       allowed: false,
       remaining: 0,

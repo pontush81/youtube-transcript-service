@@ -6,6 +6,7 @@ import { Message } from '@/lib/ai/types';
 import { rewriteQueryWithContext } from '@/lib/ai/query-rewriter';
 import { checkRateLimit, getClientIdentifier, rateLimitHeaders } from '@/lib/rate-limit';
 import { chatRequestSchema, parseRequest } from '@/lib/validations';
+import { logger } from '@/lib/logger';
 
 export const runtime = 'nodejs';
 export const maxDuration = 30;
@@ -108,7 +109,7 @@ export async function POST(request: NextRequest) {
           controller.enqueue(encoder.encode(`data: ${JSON.stringify({ type: 'done' })}\n\n`));
           controller.close();
         } catch (error) {
-          console.error('Stream error:', error);
+          logger.error('Stream error', { error: error instanceof Error ? error.message : String(error) });
           controller.enqueue(
             encoder.encode(`data: ${JSON.stringify({ type: 'error', error: 'An error occurred' })}\n\n`)
           );
@@ -125,7 +126,7 @@ export async function POST(request: NextRequest) {
       },
     });
   } catch (error) {
-    console.error('Chat error:', error);
+    logger.error('Chat error', { error: error instanceof Error ? error.message : String(error) });
     return new Response(
       JSON.stringify({ error: 'An error occurred' }),
       { status: 500, headers: { 'Content-Type': 'application/json' } }
