@@ -18,6 +18,7 @@ export default defineConfig({
       'https://www.youtube.com/*',
       'https://youtube-transcript-service-two.vercel.app/*',
       'https://*.clerk.accounts.dev/*',
+      'http://localhost:3000/*',
     ],
   },
   vite: () => ({

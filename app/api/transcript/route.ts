@@ -54,6 +54,7 @@ export async function POST(request: NextRequest) {
     ]);
 
     if (titleResult.status === 'rejected') {
+      logger.error('Video title fetch failed', { videoId, error: titleResult.reason?.message || String(titleResult.reason) });
       return NextResponse.json(
         { success: false, error: 'Video not found or is private' },
         { status: 404 }
@@ -61,10 +62,12 @@ export async function POST(request: NextRequest) {
     }
 
     if (transcriptResult.status === 'rejected') {
+      const reason = transcriptResult.reason?.message || String(transcriptResult.reason);
+      logger.error('Transcript fetch failed', { videoId, error: reason });
       return NextResponse.json(
         {
           success: false,
-          error: 'No transcript available for this video. The video likely has no captions.',
+          error: `No transcript available: ${reason}`,
         },
         { status: 404 }
       );
